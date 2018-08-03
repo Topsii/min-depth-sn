@@ -1,0 +1,1 @@
+module MinDepthSN.Data.GateOut where
