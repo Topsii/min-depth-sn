@@ -17,10 +17,10 @@ import Enumerate
     )
 
 n :: Int
-n = length layers
+n = length channels
 
 d:: Int
-d = length channels
+d = length layers
 
 channels :: [Channel]
 channels = [ minBound .. maxBound ]
@@ -56,7 +56,7 @@ beforeLayers = map before layers
 before :: Layer -> BetweenLayers
 before (Layer k) = BetweenLayers $ weaken k
 
-newtype Channel = Channel (Finite 4)
+newtype Channel = Channel (Finite 8)
     deriving
     ( Bounded
     , Enum
@@ -67,7 +67,7 @@ newtype Channel = Channel (Finite 4)
     , Ord
     , Real)
 
-newtype Layer = Layer (Finite 3)
+newtype Layer = Layer (Finite 6)
     deriving
     ( Bounded
     , Enum
@@ -83,7 +83,7 @@ newtype Layer = Layer (Finite 3)
 -- A value of 0 indicates an input value of the network.
 --
 -- A value of d is an output value of the network.
-newtype BetweenLayers = BetweenLayers (Finite 4)
+newtype BetweenLayers = BetweenLayers (Finite 7)
     deriving
     ( Bounded
     , Enum

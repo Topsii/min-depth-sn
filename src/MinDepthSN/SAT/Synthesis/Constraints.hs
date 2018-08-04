@@ -5,7 +5,7 @@ module MinDepthSN.SAT.Synthesis.Constraints where
 
 import Prelude hiding (negate)
 import SAT.IPASIR.EnumVars (Var(..), Lit, negate, polarize)
-import MinDepthSN.SAT.Synthesis.Variables (NetworkSynthesis(Value_), pattern ValueVar, pattern GateOrUnused, compOrUnusedLit, unusedLit, channels, channelsAfter, layers, afterLayers, n)
+import MinDepthSN.SAT.Synthesis.Variables (NetworkSynthesis(Value_), pattern GateOrUnused, compOrUnusedLit, unusedLit, channels, channelsAfter, layers, n)
 import Numeric.Natural
 import MinDepthSN.SAT.Constraints (fixGateOrUnused, litImplies)
 import MinDepthSN.Data.Value (Value, inputValues, outputValues)

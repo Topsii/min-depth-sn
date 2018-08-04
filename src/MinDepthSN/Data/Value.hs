@@ -12,39 +12,32 @@ module MinDepthSN.Data.Value
 
 import Data.Ord (comparing)
 import Data.Monoid ((<>))
-import Data.Map.Strict (Map)
-import Data.Array (Array)
 import GHC.Generics (Generic)
 import Enumerate (Enumerable)
-import Enumerate.Enum (toEnum_enumerable, fromEnum_enumerable)
-import Enumerate.Enum.Valid (Validatable, isValid, tableEnumerable, arrayEnumerable, validMaxBound, validMinBound)
+import Enumerate.Enum.Valid (Validatable, isValid)
 import MinDepthSN.Data.Size
 
 data Value = Value { channel :: Channel, betweenLayers :: BetweenLayers }
     deriving (Eq, Generic, Enumerable)
 
 instance Show Value where
-    show (Value i k) = "Val " ++ show i ++ " " ++ show k
+    show (Value i k) = "Value " ++ show i ++ " " ++ show k
 
 instance Ord Value where
     compare = comparing betweenLayers <> comparing channel
 
 instance Bounded Value where
-    minBound = validMinBound
-    maxBound = validMaxBound
+    minBound = toEnum 0
+    maxBound = toEnum (n*(d+1) - 1)
 
 instance Validatable Value where
     isValid = const True
 
 instance Enum Value where
-    toEnum   = toEnum_enumerable   arrayValue
-    fromEnum = fromEnum_enumerable tableValue
-
-tableValue :: Map Value Int
-tableValue = tableEnumerable
-
-arrayValue :: Array Int Value
-arrayValue = arrayEnumerable
+    toEnum int = Value (toEnum i) (toEnum k)
+      where
+        (k,i) = int `quotRem` n
+    fromEnum (Value i k) = fromEnum k * n + fromEnum i
 
 inputValues :: [Value]
 inputValues = [ Value i beforeFirstLayer | i <- channels ]

@@ -5,13 +5,11 @@ import MinDepthSN.SAT.Synthesis.Constraints
 import MinDepthSN.SAT.Synthesis.Variables
 import MinDepthSN.SAT.CounterExample.Constraints
 import MinDepthSN.SAT.CounterExample.Variables
-import Numeric.Natural
+-- import Numeric.Natural
 -- import Debug.Trace
 
 main :: IO ()
-main = print $ do
-    let network = findNetwork
-    runSolver $ do
+main = print $ runSolver $ do
         network <- findNetwork
         let maybeCex = findCounterExample network
         case maybeCex of

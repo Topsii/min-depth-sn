@@ -22,10 +22,9 @@ data Gate = ComparatorGate { minChannel :: Channel, maxChannel :: Channel, layer
 pattern Gate :: Channel -> Channel -> Layer -> Gate
 pattern Gate i j k <- ComparatorGate i j k where
     Gate i j k
-        | i > j     = ComparatorGate j i k
         | i < j     = ComparatorGate i j k
-        | otherwise = error $ "compVar: Cannot compare channel " ++ show i 
-                                ++ " with itself in layer " ++ show k
+        | otherwise = error $ "Gate i j k: Requires i < j, but given was " 
+            ++ show i ++ " = i >= j = " ++ show j
 
 instance Show Gate where
     show (ComparatorGate i j k) = "Gate " ++ show i ++ " " ++ show j ++ " " ++ show k
