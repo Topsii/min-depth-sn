@@ -5,7 +5,8 @@ import MinDepthSN.SAT.Synthesis.Constraints
 import MinDepthSN.SAT.Synthesis.Variables
 import MinDepthSN.SAT.CounterExample.Constraints
 import MinDepthSN.SAT.CounterExample.Variables
--- import Numeric.Natural
+import MinDepthSN.Data.GateOrUnused (GateOrUnused)
+import Numeric.Natural
 -- import Debug.Trace
 
 main :: IO ()
@@ -24,9 +25,9 @@ findNetwork = do
         else error "no network was found initially"
 
 -- find a network, that sorts the given input and then look if there is still a counterexample input that is not sorted
---findSortingNetwork :: Natural -> [Bool] -> Solver s NetworkSynthesis (Either [Bool] [GateOrUnused])
+findSortingNetwork :: Natural -> [Bool] -> Solver s NetworkSynthesis (Either [Bool] [GateOrUnused])
 findSortingNetwork cexIdx cex = do
-    r <- solve [ sorts cexIdx (fst cex) ]
+    r <- solve [ sorts cexIdx cex ]
     if r then do
         network <- trueAssignmentsOfGateOrUnusedVars
         {-vals <- assignmentsOfRange (minValueVar cexIdx) (maxValueVar cexIdx)
@@ -37,15 +38,16 @@ findSortingNetwork cexIdx cex = do
             Nothing -> return $ Right network
     else return $ Left cex
 
---findCounterExample :: [GateOrUnused] -> Maybe [Bool]
+findCounterExample :: [GateOrUnused] -> Maybe [Bool]
 findCounterExample network = runSolver $ do
     s <- solve [fixNetwork network, unsorted]
     if s then do
-        vals <- assignmentsOfRange minCounterExample maxCounterExample
-        let positions = (map fromDIMACS $ range minCounterExample maxCounterExample) :: [Var CounterExample]
-        let positionValues = zip vals positions
+        --vals <- assignmentsOfRange minCounterExample maxCounterExample
+        --let positions = (map fromDIMACS $ range minCounterExample maxCounterExample) :: [Var CounterExample]
+        --let positionValues = zip vals positions
         counterExampleInput <- assignmentsOfRange firstInputValueVar lastInputValueVar
-        return $ Just (counterExampleInput, positionValues)
+        return $ Just counterExampleInput
+        --return $ Just (counterExampleInput, positionValues)
     else return Nothing
 
 

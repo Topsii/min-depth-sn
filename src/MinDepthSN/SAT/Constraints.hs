@@ -1,5 +1,4 @@
 {-# LANGUAGE RebindableSyntax #-}
-{-# LANGUAGE PatternSynonyms #-}
 
 module MinDepthSN.SAT.Constraints where
 
@@ -7,7 +6,7 @@ import Prelude hiding (negate, maximum, minimum)
 import SAT.IPASIR.EnumVars (Var(..), Lit(..), negate)
 import MinDepthSN.Data.Size (Channel, BetweenLayers, before, after)
 import MinDepthSN.Data.Value (Value(..))
-import MinDepthSN.SAT.Synthesis.Variables (GateOrUnused, pattern GateOrUnused)
+import MinDepthSN.Data.GateOrUnused (GateOrUnused(..))
 
 
 -- | @fixGateOrUnused (GateOrUnused i j k)@ either compares the values on the 

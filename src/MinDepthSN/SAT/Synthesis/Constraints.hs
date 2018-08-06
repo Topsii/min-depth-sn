@@ -1,14 +1,15 @@
 {-# LANGUAGE RebindableSyntax #-}
-{-# language PatternSynonyms #-}
 
 module MinDepthSN.SAT.Synthesis.Constraints where
 
 import Prelude hiding (negate)
 import SAT.IPASIR.EnumVars (Var(..), Lit, negate, polarize)
-import MinDepthSN.SAT.Synthesis.Variables (NetworkSynthesis(Value_), pattern GateOrUnused, compOrUnusedLit, unusedLit, channels, channelsAfter, layers, n)
-import Numeric.Natural
+import MinDepthSN.SAT.Synthesis.Variables (NetworkSynthesis(Value_), compOrUnusedLit, unusedLit)
+import Numeric.Natural (Natural)
 import MinDepthSN.SAT.Constraints (fixGateOrUnused, litImplies)
 import MinDepthSN.Data.Value (Value, inputValues, outputValues)
+import MinDepthSN.Data.GateOrUnused (GateOrUnused(..))
+import MinDepthSN.Data.Size (channels, channelsAfter, layers, n)
 import Data.List (sort)
 
 -- | Each channel \(i\) is used by at most one comparator in each layer \(k\).

@@ -14,7 +14,7 @@ import GHC.Generics (Generic)
 import Enumerate (Enumerable)
 import Enumerate.Enum (toEnum_enumerable, fromEnum_enumerable)
 import Enumerate.Enum.Valid (Validatable, isValid, tableEnumerable, arrayEnumerable, validMaxBound, validMinBound)
-import MinDepthSN.Data.Size
+import MinDepthSN.Data.Size (Channel, Layer)
 
 data Gate = ComparatorGate { minChannel :: Channel, maxChannel :: Channel, layer :: Layer }
     deriving (Eq, Generic, Enumerable)

@@ -1,25 +1,16 @@
 {-# language PatternSynonyms #-}
-{-# language ViewPatterns #-}
 
 module MinDepthSN.SAT.Synthesis.Variables
     ( module Size
-    -- * Variables and literals for network synthesization
     , NetworkSynthesis(..)
     , pattern GateVar
     , pattern UnusedVar
     , pattern ValueVar
     , pattern GateOrUnusedVar
-    , GateOrUnused
-    , pattern GateOrUnused
-    , Data.Value(Value)
-    , Data.Gate(Gate)
-    , Data.Unused(Unused)
-    , compLit--, isGate
-    , unusedLit--, isUnused
+    , compLit
+    , unusedLit
     , compOrUnusedLit
-    , minGateVar, maxGateVar
-    , minUnusedVar, maxUnusedVar
-    , minValueVar, maxValueVar
+    , valueLit
     , trueAssignmentsOfGateOrUnusedVars
     , falseAssignmentsOfGateOrUnusedVars
     , trueAssignmentsOfGateVars
@@ -28,36 +19,18 @@ module MinDepthSN.SAT.Synthesis.Variables
     , falseAssignmentsOfUnusedVars
     , trueAssignmentsOfValueVars
     , falseAssignmentsOfValueVars
-    --, minChannel, maxChannel
-    --, minLayer, maxLayer
-    -- * Variables and literals for finding a counter example
-    --, Value
-    --, valueVar, valueLit
-    --, minValue, maxValue
     ) where
 
 import SAT.IPASIR.EnumVars (Solver, Var(..), Lit(..), trueAssignmentsOfRange, falseAssignmentsOfRange)
 
 import Numeric.Natural
 import Enumerate.Enum.Valid (Validatable, isValid)
-import MinDepthSN.Data.Size
-import MinDepthSN.Data.Gate (Gate)
-import qualified MinDepthSN.Data.Gate as Data
-import MinDepthSN.Data.Unused (Unused)
-import qualified MinDepthSN.Data.Unused as Data
-import MinDepthSN.Data.Value (Value)
-import qualified MinDepthSN.Data.Value as Data
+import MinDepthSN.Data.Size (Channel, Layer, BetweenLayers)
+import MinDepthSN.Data.GateOrUnused (GateOrUnused(..), Gate, Unused)
+import MinDepthSN.Data.Value (Value(..))
 
 import qualified MinDepthSN.Data.Size as Size
 
---data Val = Val Channel Layer
---data Unused = Unused Channel Layer
-
---data InitVar = InitVarGate Gate | InitVarUnused Unused
-
---data IterVar = IterVarVal Val
-
---data Var = InitVar InitVar | IterVar Word IterVar
 
 
 -- network var
@@ -66,32 +39,25 @@ import qualified MinDepthSN.Data.Size as Size
 
 
 
-
-
-
-{-# COMPLETE GateVar, UnusedVar, ValueVar #-}
-{-# COMPLETE GateOrUnusedVar, ValueVar #-}
-
 data NetworkSynthesis 
-    = Gate_ { unGate_ :: Gate }
-    | Unused_ { unUnused_ :: Unused }
+    = GateOrUnused_ { unGateOrUnused_ :: GateOrUnused }
     | Value_ { counterExIdx :: Natural, unValue_ :: Value }
     deriving (Eq, Ord)
 
 -- | @GateVar i j k@ creates a variable \(g_{i,j}^k\) representing a
 -- comparator gate where \(i\) and \(j\) are the channels and \(k\) is the layer.
 pattern GateVar :: Channel -> Channel -> Layer -> Var NetworkSynthesis
-pattern GateVar i j k = Var (Gate_ (Data.Gate i j k))
+pattern GateVar i j k = Var (GateOrUnused_ (Gate i j k))
 
 -- | @UnusedVar i k@ creates a variable \(unused_i^k\) indicating a
 -- channel \(i\) is not used by any comparator gate in layer \(k\).
 pattern UnusedVar :: Channel -> Layer -> Var NetworkSynthesis
-pattern UnusedVar i k = Var (Unused_ (Data.Unused i k))
+pattern UnusedVar i k = Var (GateOrUnused_ (Unused i k))
 
 -- | @ValueVar x i k@ creates a variable \(v_i^k\) representing the value on
 -- channel \(i\) between layers \(k-1\) and \(k\) for the x-th counterexample input.
 pattern ValueVar :: Natural -> Channel -> BetweenLayers -> Var NetworkSynthesis
-pattern ValueVar x i k = Var (Value_ x (Data.Value i k))
+pattern ValueVar x i k = Var (Value_ x (Value i k))
 
 -- | A variable \(gu_{i,j}^k\) is either a comparator \(g\)ate variable or an 
 -- \(u\)nused variable.
@@ -115,98 +81,29 @@ pattern ValueVar x i k = Var (Value_ x (Data.Value i k))
 -- variables. For any occurrence of \(gu_{i,j}^k\) in formulas or clauses, its 
 -- definition is passed to the solver instead.
 pattern GateOrUnusedVar :: Channel -> Channel -> Layer -> Var NetworkSynthesis
--- wait for or-patterns: https://github.com/ghc-proposals/ghc-proposals/pull/43
--- get rid of matchGateOrUnused and view patterns then
---pattern GateOrUnusedVar i j k <- GateVar i j k | GateOrUnusedVar i i k <- UnusedVar i k
-pattern GateOrUnusedVar i j k <- (matchGateOrUnused -> (i, j, k)) where
-    GateOrUnusedVar i j k
-        | i > j = GateVar j i k
-        | i < j = GateVar i j k
-        | otherwise = UnusedVar i k
+pattern GateOrUnusedVar i j k = Var (GateOrUnused_ (GateOrUnused i j k))
 
-{-# COMPLETE GateOrUnused #-}
 
-newtype GateOrUnused = GateOrUnused_ { unGateOrUnused_ :: NetworkSynthesis }
-    deriving (Eq, Ord)
-
-instance Show GateOrUnused where
-    show = show . unGateOrUnused_
-
-pattern GateOrUnused :: Channel -> Channel -> Layer -> GateOrUnused
-pattern GateOrUnused i j k <- (matchGateOrUnused . Var . unGateOrUnused_ -> (i, j, k)) where
-    GateOrUnused i j k = GateOrUnused_ . unVar $ GateOrUnusedVar i j k
-
--- obsolete with or-patterns, see above
-matchGateOrUnused ::  Var NetworkSynthesis -> (Channel, Channel, Layer)
-matchGateOrUnused v
-    | isGate v || isUnused v = (i, j, k)
-  --  | otherwise = error $ "matchGateOrUnused: Not a comp or unused variable: " ++ show v
-  where
-    i, j :: Channel
-    i = minChannel v
-    j = maxChannel v
-    k :: Layer
-    k = minLayer v
-
-isGate :: Var NetworkSynthesis -> Bool
-isGate v = case v of
-    GateVar {} -> True
-    _          -> False
-
-isUnused :: Var NetworkSynthesis -> Bool
-isUnused v = case v of
-    UnusedVar {} -> True
-    _            -> False
-
-minChannel :: Var NetworkSynthesis -> Channel
-minChannel v = case v of
-    GateVar i j _ -> min i j
-    UnusedVar i _ -> i
-    ValueVar _ i _  -> i
-
-maxChannel :: Var NetworkSynthesis -> Channel
-maxChannel v = case v of
-    GateVar i j _ -> max i j
-    UnusedVar i _ -> i
-    ValueVar _ i _  -> i
-    
-minLayer :: Var NetworkSynthesis -> Layer
-minLayer v = case v of
-    GateVar _ _ k -> k
-    UnusedVar _ k -> k
-    ValueVar {}  -> error $ "minLayer: ValueVar " ++ show v ++ 
-        "is between layers and thus has no layer." 
-
--- maxLayer :: Var NetworkSynthesis -> Layer
--- maxLayer v = case v of
---     GateVar _ _ k -> k
---     UnusedVar _ k -> k
---     ValueVar {}  -> error $ "minLayer: ValueVar " ++ show v ++ 
---         "is between layers and thus has no layer." 
 
 instance Show NetworkSynthesis where
     show var = case var of
-        Gate_ c -> show c
-        Unused_ u -> show u
+        GateOrUnused_ gu -> show gu
         Value_ cexIdx val -> show cexIdx ++ " " ++ show val
 
 instance Validatable NetworkSynthesis where
     isValid var = case var of
-        Gate_ c -> isValid c
-        Unused_ u -> isValid u
+        GateOrUnused_ gu -> isValid gu
         Value_ _ val -> isValid val
 
-compOffset :: Int
-compOffset = 0
-
-unusedOffset :: Int
-unusedOffset = fromEnum (Gate_ maxBound) + 1
+gateOrUnusedOffset :: Int
+gateOrUnusedOffset = 0
 
 valueOffset :: Int
-valueOffset = fromEnum (Unused_ maxBound) + 1
+valueOffset = fromEnum (GateOrUnused_ maxBound) + 1
 
 -- | NetworkSynthesis values are enumerated as follows starting from 0:
 -- where
+--
 --    0   <-> Gate_ minBound
 --    ... <-> ...
 --    ... <-> Gate_ maxBound
@@ -224,8 +121,7 @@ instance Enum NetworkSynthesis where
 
     toEnum i
         | i < 0 = error $ "toEnum (NetworkSynthesis): negative argument " ++ show i
-        | i <= fromEnum (Gate_ maxBound) = Gate_ $ toEnum (i - compOffset)
-        | i <= fromEnum (Unused_ maxBound) = Unused_ $ toEnum (i - unusedOffset)
+        | i <= fromEnum (GateOrUnused_ maxBound) = GateOrUnused_ $ toEnum (i - gateOrUnusedOffset)
         | otherwise = Value_ (toEnum iter) (toEnum iVal)
         -- check if i < (2^n) * fromEnum (maxBound :: Value)
       where
@@ -233,184 +129,96 @@ instance Enum NetworkSynthesis where
         (iter, iVal) = (i - valueOffset) `quotRem` fromEnum (maxBound :: Value)
 
     fromEnum var = case var of
-        Gate_ c         -> compOffset   + fromEnum c
-        Unused_ u       -> unusedOffset + fromEnum u
-        Value_ iter val -> valueOffset  + fromEnum val +
+        GateOrUnused_ gu -> gateOrUnusedOffset + fromEnum gu
+        Value_ iter val  -> valueOffset  + fromEnum val +
             fromEnum iter * (fromEnum (maxBound :: Value) + 1)
-            
-
-
-
--- instance Ord NetworkVar where
---     compare = 
---         comparing isGate <> 
---         comparing isUnused
-
-
-
-
-
-
-
-
-
-
 
 
 -- | Literal of 'GateOrUnusedVar' with positive polarity.
 compOrUnusedLit :: Channel -> Channel -> Layer -> Lit NetworkSynthesis
 compOrUnusedLit i j k = Pos (GateOrUnusedVar i j k)
 
+pattern GateOrUnused_Var :: GateOrUnused -> Var NetworkSynthesis
+pattern GateOrUnused_Var { gateOrUnused } = Var (GateOrUnused_ gateOrUnused)
+
 minGateOrUnusedVar :: Var NetworkSynthesis
-minGateOrUnusedVar = Var (min (Gate_ minBound) (Unused_ minBound))
+minGateOrUnusedVar = GateOrUnused_Var minBound
 
 maxGateOrUnusedVar :: Var NetworkSynthesis
-maxGateOrUnusedVar = Var (max (Gate_ maxBound) (Unused_ maxBound))
+maxGateOrUnusedVar = GateOrUnused_Var maxBound
 
 trueAssignmentsOfGateOrUnusedVars :: Solver s NetworkSynthesis [GateOrUnused]
-trueAssignmentsOfGateOrUnusedVars = map (GateOrUnused_ . unVar) <$> trueAssignmentsOfRange minGateOrUnusedVar maxGateOrUnusedVar
+trueAssignmentsOfGateOrUnusedVars =
+    map gateOrUnused <$> trueAssignmentsOfRange minGateOrUnusedVar maxGateOrUnusedVar
 
 falseAssignmentsOfGateOrUnusedVars :: Solver s NetworkSynthesis [GateOrUnused]
-falseAssignmentsOfGateOrUnusedVars = map (GateOrUnused_ . unVar) <$> falseAssignmentsOfRange minGateOrUnusedVar maxGateOrUnusedVar
+falseAssignmentsOfGateOrUnusedVars =
+    map gateOrUnused <$> falseAssignmentsOfRange minGateOrUnusedVar maxGateOrUnusedVar
 
 
 -- | Literal of 'GateVar' with positive polarity.
 compLit :: Channel -> Channel -> Layer -> Lit NetworkSynthesis
 compLit i j k = Pos (GateVar i j k)
 
+pattern Gate_Var :: Gate -> Var NetworkSynthesis
+pattern Gate_Var { gate } = Var (GateOrUnused_ (Gate_ gate))
+
 minGateVar :: Var NetworkSynthesis
-minGateVar = Var $ Gate_ minBound
+minGateVar = Gate_Var minBound
 
 maxGateVar :: Var NetworkSynthesis
-maxGateVar = Var $ Gate_ maxBound
+maxGateVar = Gate_Var maxBound
 
 trueAssignmentsOfGateVars :: Solver s NetworkSynthesis [Gate]
-trueAssignmentsOfGateVars = map (unGate_ . unVar) <$> trueAssignmentsOfRange minGateVar maxGateVar
+trueAssignmentsOfGateVars = 
+    map gate <$> trueAssignmentsOfRange minGateVar maxGateVar
 
 falseAssignmentsOfGateVars :: Solver s NetworkSynthesis [Gate]
-falseAssignmentsOfGateVars = map (unGate_ . unVar) <$> falseAssignmentsOfRange minGateVar maxGateVar
+falseAssignmentsOfGateVars = 
+    map gate <$> falseAssignmentsOfRange minGateVar maxGateVar
 
 
+-- | Literal of 'UnusedVar' with positive polarity.
 unusedLit :: Channel -> Layer -> Lit NetworkSynthesis
 unusedLit i k = Pos (UnusedVar i k)
 
+pattern Unused_Var :: Unused -> Var NetworkSynthesis
+pattern Unused_Var { unused } = Var (GateOrUnused_ (Unused_ unused))
+
 minUnusedVar :: Var NetworkSynthesis
-minUnusedVar = Var $ Unused_ minBound
+minUnusedVar = Unused_Var minBound
 
 maxUnusedVar :: Var NetworkSynthesis
-maxUnusedVar = Var $ Unused_ maxBound
+maxUnusedVar = Unused_Var maxBound
 
 trueAssignmentsOfUnusedVars :: Solver s NetworkSynthesis [Unused]
-trueAssignmentsOfUnusedVars = map (unUnused_ . unVar) <$> trueAssignmentsOfRange minUnusedVar maxUnusedVar
+trueAssignmentsOfUnusedVars =
+    map unused <$> trueAssignmentsOfRange minUnusedVar maxUnusedVar
 
 falseAssignmentsOfUnusedVars :: Solver s NetworkSynthesis [Unused]
-falseAssignmentsOfUnusedVars = map (unUnused_ . unVar) <$> falseAssignmentsOfRange minUnusedVar maxUnusedVar
+falseAssignmentsOfUnusedVars =
+    map unused <$> falseAssignmentsOfRange minUnusedVar maxUnusedVar
 
 
+-- | Literal of 'ValueVar' with positive polarity.
+valueLit :: Natural -> Channel -> BetweenLayers -> Lit NetworkSynthesis
+valueLit cexIdx i k = Pos (ValueVar cexIdx i k)
+
+pattern Value_Var :: Natural -> Value -> Var NetworkSynthesis
+pattern Value_Var { _cexIdx, value } = Var (Value_ _cexIdx value)
 
 minValueVar :: Natural -> Var NetworkSynthesis
-minValueVar cexIdx = Var $ Value_ cexIdx minBound
+minValueVar cexIdx = Value_Var cexIdx minBound
 
 maxValueVar :: Natural -> Var NetworkSynthesis
-maxValueVar cexIdx = Var $ Value_ cexIdx maxBound
+maxValueVar cexIdx = Value_Var cexIdx maxBound
 
 trueAssignmentsOfValueVars :: Natural -> Solver s NetworkSynthesis [Value]
-trueAssignmentsOfValueVars cexIdx = map (unValue_ . unVar) <$> trueAssignmentsOfRange (minValueVar cexIdx) (maxValueVar cexIdx)
+trueAssignmentsOfValueVars cexIdx =
+    map value <$> trueAssignmentsOfRange (minValueVar cexIdx) (maxValueVar cexIdx)
 
 falseAssignmentsOfValueVars :: Natural -> Solver s NetworkSynthesis [Value]
-falseAssignmentsOfValueVars cexIdx = map (unValue_ . unVar) <$> falseAssignmentsOfRange (minValueVar cexIdx) (maxValueVar cexIdx)
+falseAssignmentsOfValueVars cexIdx =
+    map value <$> falseAssignmentsOfRange (minValueVar cexIdx) (maxValueVar cexIdx)
 
 
-{-
-compVar :: Channel -> Channel -> Layer -> Var Gate
-compVar i j k
-    | i < j = Var $ Gate i j k
-    | i > j = Var $ Gate j i k
-
-data Gate = Gate Channel -- lower indexed channel
-                 Channel -- higher indexed channel
-                 Layer
-    deriving (Show, Eq, Ord, Generic, Enumerable)
-
-instance Validatable Gate where
-    isValid (Gate i j _)
-        | i < j = True
-        | otherwise = False
-
-
-
-data Used = UsedUnexported Channel Layer
-    deriving (Show, Eq, Ord, Generic, Enumerable)
-
-instance Bounded Used where
-    minBound = minUsed
-    maxBound = maxUsed
-
-instance Validatable Used where
-    isValid = const True
-
-instance Enum Used where
-    toEnum   = toEnum_enumerable   arrayUsed
-    fromEnum = fromEnum_enumerable tableUsed
-    
-tableUsed :: Map Used Int
-tableUsed = tableEnumerable
-
-arrayUsed :: Array Int Used
-arrayUsed = arrayEnumerable
-
-maxUsed :: Used
-maxUsed = validMaxBound
-
-minUsed :: Used
-minUsed = validMinBound
--}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-{-
-
-data Value = Value Channel BetweenLayers
-    deriving (Show, Eq, Ord, Generic, Enumerable)
-
-instance Bounded Value where
-    minBound = minValue
-    maxBound = maxValue
-
-instance Validatable Value where
-    isValid = const True
-
-instance Enum Value where
-    toEnum   = toEnum_enumerable   arrayValue
-    fromEnum = fromEnum_enumerable tableValue
-
-tableValue :: Map Value Int
-tableValue = tableEnumerable
-
-arrayValue :: Array Int Value
-arrayValue = arrayEnumerable
-
-valueLit :: Channel -> BetweenLayers -> Lit Value
-valueLit i k = Pos (valueVar i k)
-
-valueVar :: Channel -> BetweenLayers -> Var Value
-valueVar i k = Var $ Value i k
-
-maxValue :: Value
-maxValue = validMaxBound
-
-minValue :: Value
-minValue = validMinBound
--}

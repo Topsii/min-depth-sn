@@ -1,10 +1,27 @@
 {-# language DataKinds #-}
 {-# language GeneralizedNewtypeDeriving #-}
 
-{-# language ExistentialQuantification #-}
-{-# language TypeOperators #-}
-
-module MinDepthSN.Data.Size where
+module MinDepthSN.Data.Size 
+    ( 
+    -- * Channel
+      Channel
+    , n
+    , channels
+    , channelsBefore
+    , channelsAfter
+    -- * Layer
+    , Layer
+    , d
+    , layers
+    -- * BetweenLayers
+    , BetweenLayers
+    , before
+    , after
+    , beforeFirstLayer
+    , afterLastLayer
+    , beforeLayers
+    , afterLayers
+    ) where
 
 import Data.Finite --(Finite)
 import GHC.TypeNats-- (KnownNat)
@@ -25,15 +42,24 @@ d = length layers
 channels :: [Channel]
 channels = [ minBound .. maxBound ]
 
+channelsBefore :: Channel -> [Channel]
+channelsBefore c
+    | c == minBound = []
+    | otherwise = [ minBound .. pred c ]
+
 channelsAfter :: Channel -> [Channel]
 channelsAfter c
     | c == maxBound = []
     | otherwise = [ succ c .. maxBound ]
 
-channelsBefore :: Channel -> [Channel]
-channelsBefore c
-    | c == minBound = []
-    | otherwise = [ minBound .. pred c ]
+layers :: [Layer]
+layers = [ 0 .. maxBound ]
+
+before :: Layer -> BetweenLayers
+before (Layer k) = BetweenLayers $ weaken k
+
+after :: Layer -> BetweenLayers
+after (Layer k) = BetweenLayers $ shiftN k
 
 beforeFirstLayer :: BetweenLayers
 beforeFirstLayer = before minBound
@@ -41,20 +67,12 @@ beforeFirstLayer = before minBound
 afterLastLayer :: BetweenLayers
 afterLastLayer = after maxBound
 
-layers :: [Layer]
-layers = [ 0 .. maxBound ]
-
 afterLayers :: [BetweenLayers]
 afterLayers = map after layers
-
-after :: Layer -> BetweenLayers
-after (Layer k) = BetweenLayers $ shiftN k
 
 beforeLayers :: [BetweenLayers]
 beforeLayers = map before layers
 
-before :: Layer -> BetweenLayers
-before (Layer k) = BetweenLayers $ weaken k
 
 newtype Channel = Channel (Finite 8)
     deriving

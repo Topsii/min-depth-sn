@@ -5,11 +5,11 @@ module MinDepthSN.SAT.CounterExample.Constraints where
 import Prelude hiding (negate)
 import Data.List (inits, tails)
 import SAT.IPASIR.EnumVars (Var(..), Lit(..), negate)
-import MinDepthSN.SAT.Synthesis.Variables (GateOrUnused)
 import MinDepthSN.SAT.Constraints (fixGateOrUnused)
 import MinDepthSN.SAT.CounterExample.Variables (CounterExample(..), valueLit)
 import MinDepthSN.Data.Size (channels, channelsAfter, afterLastLayer)
 import MinDepthSN.Data.Value (outputValues)
+import MinDepthSN.Data.GateOrUnused (GateOrUnused)
 --findCounterEx :: [Gate]
 --findCounterEx = undefined
 

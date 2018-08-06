@@ -15,7 +15,7 @@ import Data.Monoid ((<>))
 import GHC.Generics (Generic)
 import Enumerate (Enumerable)
 import Enumerate.Enum.Valid (Validatable, isValid)
-import MinDepthSN.Data.Size
+import MinDepthSN.Data.Size (Channel, BetweenLayers, n, d, channels, beforeFirstLayer, afterLastLayer)
 
 data Value = Value { channel :: Channel, betweenLayers :: BetweenLayers }
     deriving (Eq, Generic, Enumerable)
