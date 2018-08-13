@@ -1,4 +1,5 @@
 {-# language DataKinds #-}
+{-# language TypeOperators #-}
 {-# language GeneralizedNewtypeDeriving #-}
 
 module MinDepthSN.Data.Size 
@@ -9,6 +10,7 @@ module MinDepthSN.Data.Size
     , channels
     , channelsBefore
     , channelsAfter
+    , channelsBetween
     -- * Layer
     , Layer
     , d
@@ -21,10 +23,12 @@ module MinDepthSN.Data.Size
     , afterLastLayer
     , beforeLayers
     , afterLayers
+    -- * Gate
+    , Gate
     ) where
 
-import Data.Finite --(Finite)
-import GHC.TypeNats-- (KnownNat)
+import Data.Finite (Finite, weaken, shiftN)
+import GHC.TypeNats (KnownNat, Div, type (+))
 import Enumerate
     ( Enumerable
     , enumerated
@@ -52,6 +56,13 @@ channelsAfter c
     | c == maxBound = []
     | otherwise = [ succ c .. maxBound ]
 
+-- |    channelsBetween a b == [a+1, a+2, .. b-2, b-1]
+channelsBetween :: Channel -> Channel -> [Channel]
+channelsBetween from to
+    | from == maxBound = []
+    | to == minBound = []
+    | otherwise = [ succ from .. pred to ]
+
 layers :: [Layer]
 layers = [ 0 .. maxBound ]
 
@@ -73,8 +84,10 @@ afterLayers = map after layers
 beforeLayers :: [BetweenLayers]
 beforeLayers = map before layers
 
+type N = 4
+type D = 3
 
-newtype Channel = Channel (Finite 8)
+newtype Channel = Channel (Finite N)
     deriving
     ( Bounded
     , Enum
@@ -85,7 +98,7 @@ newtype Channel = Channel (Finite 8)
     , Ord
     , Real)
 
-newtype Layer = Layer (Finite 6)
+newtype Layer = Layer (Finite D)
     deriving
     ( Bounded
     , Enum
@@ -93,6 +106,17 @@ newtype Layer = Layer (Finite 6)
     , Integral -- ^ __Not__ modular arithmetic.
     , Num      -- ^ Modular arithmetic. Only the fromInteger function 
                -- is supposed to be useful.
+    , Ord
+    , Real)
+
+newtype Gate = Gate (Finite (N `Div` 2))
+    deriving
+    ( Bounded
+    , Enum
+    , Eq
+    , Integral -- ^ __Not__ modular arithmetic.
+    , Num      -- ^ Modular arithmetic. Only the fromInteger function 
+                -- is supposed to be useful.
     , Ord
     , Real)
 
@@ -101,7 +125,7 @@ newtype Layer = Layer (Finite 6)
 -- A value of 0 indicates an input value of the network.
 --
 -- A value of d is an output value of the network.
-newtype BetweenLayers = BetweenLayers (Finite 7)
+newtype BetweenLayers = BetweenLayers (Finite (D+1))
     deriving
     ( Bounded
     , Enum
@@ -118,6 +142,8 @@ instance (Show Layer) where
     show (Layer k) = show $ toInteger k
 instance (Show BetweenLayers) where
     show (BetweenLayers k) = show $ toInteger k
+instance (Show Gate) where
+    show (Gate a) = show $ toInteger a
 
 instance KnownNat n => Enumerable (Finite n) where
     enumerated = boundedEnumerated
@@ -132,5 +158,9 @@ instance Enumerable Layer where
     cardinality = boundedCardinality
 
 instance Enumerable BetweenLayers where
+    enumerated = boundedEnumerated
+    cardinality = boundedCardinality
+
+instance Enumerable Gate where
     enumerated = boundedEnumerated
     cardinality = boundedCardinality

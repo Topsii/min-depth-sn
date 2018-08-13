@@ -26,6 +26,7 @@ import Control.Monad.ST (ST, runST)
 import Control.Monad.Trans.Reader (ReaderT(..), runReaderT)
 
 import Data.Word (Word8)
+import Control.Applicative (liftA2)
 
 import Foreign.Ptr (Ptr, castPtr)
 import Foreign.ForeignPtr (ForeignPtr, FinalizerPtr, newForeignPtr, withForeignPtr)
@@ -48,6 +49,16 @@ import Foreign.C.Types (CInt)
 
 newtype Solver s a = Solver { unSolver :: ReaderT (SolverPtr s) (ST s) a }
     deriving (Functor, Applicative, Monad)
+
+-- | Same Semigroup instance as 'Control.Monad.ST'
+-- With GHC 8.6.1 this can be derived with the deriving via language extension.
+instance Semigroup a => Semigroup (Solver s a) where
+    (<>) = liftA2 (<>)
+
+-- | Same Monoid instance as 'Control.Monad.ST'
+-- With GHC 8.6.1 this can be derived with the deriving via language extension.
+instance Monoid a => Monoid (Solver s a) where
+    mempty = pure mempty
 
 runSolver :: (forall s. Solver s {-Input j-} a) -> a
 runSolver s = runST (ipasirInit >>= runReaderT (unSolver s))

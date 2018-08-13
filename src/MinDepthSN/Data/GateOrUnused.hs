@@ -11,8 +11,8 @@ import Enumerate.Enum.Valid (Validatable, isValid)
 import MinDepthSN.Data.Size (Channel, Layer)
 import MinDepthSN.Data.Gate (Gate)
 import MinDepthSN.Data.Unused (Unused)
-import qualified MinDepthSN.Data.Gate as Data
-import qualified MinDepthSN.Data.Unused as Data
+import qualified MinDepthSN.Data.Gate as Gate
+import qualified MinDepthSN.Data.Unused as Unused
 
 data GateOrUnused 
     = Gate_ Gate
@@ -26,10 +26,10 @@ data GateOrUnused
 {-# COMPLETE GateOrUnused   #-}
 
 pattern Gate :: Channel -> Channel -> Layer -> GateOrUnused
-pattern Gate i j k = Gate_ (Data.Gate i j k)
+pattern Gate i j k = Gate_ (Gate.Gate i j k)
 
 pattern Unused :: Channel -> Layer -> GateOrUnused
-pattern Unused i k = Unused_ (Data.Unused i k)
+pattern Unused i k = Unused_ (Unused.Unused i k)
 
 pattern GateOrUnused :: Channel -> Channel -> Layer -> GateOrUnused
 pattern GateOrUnused i j k <- (matchGateOrUnused -> (i, j, k)) where
@@ -67,11 +67,11 @@ instance Enum GateOrUnused where
 
     toEnum i
         | i < 0 = error $ "toEnum (GateOrUnused): negative argument " ++ show i
-        | i <= fromEnum (Gate_ maxBound)   = Gate_   $ toEnum (i - compOffset  )
+        | i <= fromEnum (Gate_   maxBound) = Gate_   $ toEnum (i -   compOffset)
         | i <= fromEnum (Unused_ maxBound) = Unused_ $ toEnum (i - unusedOffset)
         | otherwise = error $ "toEnum (GateOrUnused):"
             ++ "argument " ++ show i ++ "exceeds maxBound"
 
     fromEnum gu = case gu of
-        Gate_ g   -> compOffset   + fromEnum g
+        Gate_   g ->   compOffset + fromEnum g
         Unused_ u -> unusedOffset + fromEnum u

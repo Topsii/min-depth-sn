@@ -3,6 +3,7 @@
 module MinDepthSN.SAT.Constraints where
 
 import Prelude hiding (negate, maximum, minimum)
+import Data.List (inits)
 import SAT.IPASIR.EnumVars (Var(..), Lit(..), negate)
 import MinDepthSN.Data.Size (Channel, BetweenLayers, before, after)
 import MinDepthSN.Data.Value (Value(..))
@@ -85,3 +86,25 @@ maximum lit1 lit2 litMax =
 -- \]
 litImplies :: Lit a -> [[Lit a]] -> [[Lit a]]
 litImplies = map . (:) . negate
+
+-- | Given list of literals must not contain duplicates.
+exactlyOneOf :: [Lit a] -> [[Lit a]]
+exactlyOneOf lits = atLeastOneOf lits ++ atMostOneOf lits
+
+-- | Given list of literals must not contain duplicates.
+-- Let \(lit_1\) and \(lit_2\) be two literals from the list. They cannot both 
+-- be true, since it would contradict the clause 
+-- \( \neg lit_1 \vee \neg lit_2 \).
+atMostOneOf :: [Lit a] -> [[Lit a]]
+atMostOneOf lits =
+    [
+        [ -l1, -l2 ]
+    | (litsBeforeL2, l2) <- zip (inits lits) lits
+    , l1 <- litsBeforeL2
+    ]
+
+atLeastOneOf :: [Lit a] -> [[Lit a]]
+atLeastOneOf lits = [lits]
+
+noneOf :: [Lit a] -> [[Lit a]]
+noneOf lits = [ [ -l ] | l <- lits ] 

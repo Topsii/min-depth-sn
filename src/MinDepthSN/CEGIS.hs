@@ -1,8 +1,8 @@
 module MinDepthSN.CEGIS where
 
 import SAT.IPASIR.EnumVars
-import MinDepthSN.SAT.Synthesis.Constraints
-import MinDepthSN.SAT.Synthesis.Variables
+import MinDepthSN.SAT.Synthesis.ConstraintsBZ
+import MinDepthSN.SAT.Synthesis.VarsBZ
 import MinDepthSN.SAT.CounterExample.Constraints
 import MinDepthSN.SAT.CounterExample.Variables
 import MinDepthSN.Data.GateOrUnused (GateOrUnused)
@@ -19,7 +19,7 @@ main = print $ runSolver $ do
 
 findNetwork :: Solver s NetworkSynthesis [GateOrUnused]
 findNetwork = do
-    r <- solve [ usageOnce, unused, maximalFirstLayer ]
+    r <- solve [ usage, maximalFirstLayer, outsideSpan ]
     if r 
         then trueAssignmentsOfGateOrUnusedVars
         else error "no network was found initially"

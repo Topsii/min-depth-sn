@@ -27,6 +27,7 @@ library:
   - ipasir
   - containers
   - transformers
+  - split
   - enumerate
   - array
   - finite-typelits

@@ -16,7 +16,8 @@ import SAT.IPASIR.IntegralLits (ipasirAdd, ipasirSolve, finalizeClause, trueAssi
 -- track max var index, ensure valid requests for ipasirVal/ipasirConflict
 
 newtype Solver s v a = Solver { unSolver :: DIMACS.Solver s a }
-    deriving (Functor, Applicative, Monad)
+    deriving (Functor, Applicative, Monad, Semigroup, Monoid)
+
 
 runSolver :: Enum v => (forall s. Solver s v a) -> a
 runSolver solver = DIMACS.runSolver (unSolver solver)
