@@ -5,40 +5,43 @@ import MinDepthSN.SAT.Synthesis.ConstraintsBZ
 import MinDepthSN.SAT.Synthesis.VarsBZ
 import MinDepthSN.SAT.CounterExample.Constraints
 import MinDepthSN.SAT.CounterExample.Variables
-import MinDepthSN.Data.GateOrUnused (GateOrUnused)
+import MinDepthSN.Data.GateOrUnused (GateOrUnused, SortOrder, StandardGateOrUnused, GeneralizedGateOrUnused)
 import Numeric.Natural
--- import Debug.Trace
+import Debug.Trace
 
 main :: IO ()
-main = print $ runSolver $ do
-        network <- findNetwork
-        let maybeCex = findCounterExample network
-        case maybeCex of
-            Nothing -> error "no initial cex"
-            Just cex -> findSortingNetwork 0 cex
+main = print networkSolution
 
-findNetwork :: Solver s NetworkSynthesis [GateOrUnused]
+networkSolution :: Either [Bool] [GeneralizedGateOrUnused]
+networkSolution = runSolver $ do
+    network <- findNetwork
+    let maybeCex = findCounterExample network
+    case maybeCex of
+        Nothing -> error "no initial cex"
+        Just cex -> findSortingNetwork 0 cex
+
+findNetwork :: SortOrder o => Solver s (NetworkSynthesis o) [GateOrUnused o]
 findNetwork = do
-    r <- solve [ usage, maximalFirstLayer, outsideSpan ]
-    if r 
-        then trueAssignmentsOfGateOrUnusedVars
+    r <- solve [ usage ]
+    if r
+        then trueAssignedGateOrUnusedVars
         else error "no network was found initially"
 
 -- find a network, that sorts the given input and then look if there is still a counterexample input that is not sorted
-findSortingNetwork :: Natural -> [Bool] -> Solver s NetworkSynthesis (Either [Bool] [GateOrUnused])
+findSortingNetwork :: SortOrder o => Natural -> [Bool] -> Solver s (NetworkSynthesis o) (Either [Bool] [GateOrUnused o])
 findSortingNetwork cexIdx cex = do
     r <- solve [ sorts cexIdx cex ]
     if r then do
-        network <- trueAssignmentsOfGateOrUnusedVars
-        {-vals <- assignmentsOfRange (minValueVar cexIdx) (maxValueVar cexIdx)
-        let positions = (map fromDIMACS $ range minCounterExample maxCounterExample) :: [Var CounterExample]
+        network <- trueAssignedGateOrUnusedVars
+        vals <- assignmentsOfValueVars cexIdx
+        {-let positions = (map fromDIMACS $ range minCounterExample maxCounterExample) :: [Var CounterExample]
         let positionValues = zip vals positions-}
-        case findCounterExample $ {-trace (show network ++ "\n" ++ show positionValues ++ "\n") -}network of
+        case findCounterExample {-$ trace (show network ++ "\n" ++ show positionValues ++ "\n")-} network of
             Just cex2 -> {-trace (show cex2 ++ "\n") $-} findSortingNetwork (cexIdx + 1) cex2
             Nothing -> return $ Right network
     else return $ Left cex
 
-findCounterExample :: [GateOrUnused] -> Maybe [Bool]
+findCounterExample :: SortOrder o => [GateOrUnused o] -> Maybe [Bool]
 findCounterExample network = runSolver $ do
     s <- solve [fixNetwork network, unsorted]
     if s then do

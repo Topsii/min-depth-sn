@@ -4,7 +4,7 @@
 module MinDepthSN.SAT.CounterExample.Variables where
 
 import Enumerate (Enumerable, enumerated, boundedEnumerated, cardinality, boundedCardinality)
-import Enumerate.Enum.Valid (Validatable, validMinBound, validMaxBound)
+import Enumerate.Enum.Valid (Validatable)
 
 import SAT.IPASIR.EnumVars (Var(..), Lit(..))
 
@@ -34,7 +34,7 @@ lastInputValueVar :: Var CounterExample
 lastInputValueVar = Var . CounterExample $ lastInputValue
 
 minCounterExample :: Var CounterExample
-minCounterExample = Var validMinBound
+minCounterExample = Var minBound
 
 maxCounterExample :: Var CounterExample
-maxCounterExample = Var validMaxBound
+maxCounterExample = Var maxBound

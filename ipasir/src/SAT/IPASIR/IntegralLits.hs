@@ -33,8 +33,8 @@ isTrue = ipasirVal
 isFalse :: CInt -> Solver s Bool
 isFalse = ipasirVal =>^ not
 
-trueAssignmentsOf :: [CInt] -> Solver s [CInt]
-trueAssignmentsOf = filterM isTrue
+trueAssignedVarsOf :: [CInt] -> Solver s [CInt]
+trueAssignedVarsOf = filterM isTrue
 
-falseAssignmentsOf ::  [CInt] -> Solver s [CInt]
-falseAssignmentsOf = filterM isFalse
+falseAssignedVarsOf ::  [CInt] -> Solver s [CInt]
+falseAssignedVarsOf = filterM isFalse

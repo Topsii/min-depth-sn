@@ -1,52 +1,99 @@
+{-# language DataKinds #-}
+{-# language KindSignatures #-}
+{-# language ScopedTypeVariables #-}
+{-# language GeneralizedNewtypeDeriving #-}
+{-# language DerivingStrategies #-}
+
 {-# language DeriveGeneric #-}
 {-# language DeriveAnyClass #-}
 {-# language PatternSynonyms #-}
 
 module MinDepthSN.Data.Gate
-    ( Gate(Gate)
+    ( Gate(Gate, StandardGate, GeneralizedGate)
+    , StandardGate
+    , GeneralizedGate
+    , SortingOrder(..)
+    , SortOrder
+    , sortOrder
     ) where
 
 import Data.Ord (comparing)
 import Data.Monoid ((<>))
-import Data.Map.Strict (Map)
-import Data.Array (Array)
 import GHC.Generics (Generic)
-import Enumerate (Enumerable)
-import Enumerate.Enum (toEnum_enumerable, fromEnum_enumerable)
-import Enumerate.Enum.Valid (Validatable, isValid, tableEnumerable, arrayEnumerable, validMaxBound, validMinBound)
+import Enumerate
+    ( Enumerable
+    , enumerated
+    , boundedEnumerated
+    , cardinality
+    , boundedCardinality
+    )
+import Enumerate.Enum.Valid (Validatable, Valid(..), isValid)
 import MinDepthSN.Data.Size (Channel, Layer)
 
-data Gate = ComparatorGate { minChannel :: Channel, maxChannel :: Channel, layer :: Layer }
-    deriving (Eq, Generic, Enumerable)
+data SortingOrder = Standard | Generalized
+    deriving (Eq, Show)
 
-pattern Gate :: Channel -> Channel -> Layer -> Gate
-pattern Gate i j k <- ComparatorGate i j k where
-    Gate i j k
-        | i < j     = ComparatorGate i j k
-        | otherwise = error $ "Gate i j k: Requires i < j, but given was " 
-            ++ show i ++ " = i >= j = " ++ show j
+class SortOrder (o :: SortingOrder) where
+    sortOrder :: f o -> SortingOrder
 
-instance Show Gate where
-    show (ComparatorGate i j k) = "Gate " ++ show i ++ " " ++ show j ++ " " ++ show k
+instance SortOrder 'Standard where
+    sortOrder _ = Standard
 
-instance Ord Gate where
+instance SortOrder 'Generalized where
+    sortOrder _ = Generalized
+
+type StandardGate = Gate 'Standard
+type GeneralizedGate = Gate 'Generalized
+
+data ComparatorGate (o :: SortingOrder) =
+    ComparatorGate { minChannel :: Channel, maxChannel :: Channel, layer :: Layer }
+    deriving (Eq, Generic, Enumerable, Show)
+
+-- isMinMax :: ComparatorGate o -> Bool
+isMinMax gate = minChannel gate < maxChannel gate
+
+-- isMaxMin :: ComparatorGate o -> Bool
+isMaxMin = not . isMinMax
+
+instance Ord (ComparatorGate o) where
     compare = comparing layer <> comparing minChannel <> comparing maxChannel
 
-instance Validatable Gate where
-    isValid (ComparatorGate i j _)
-        | i < j = True
-        | otherwise = False
+instance SortOrder o => Validatable (ComparatorGate o) where
+    isValid gate@(ComparatorGate i j _) = case sortOrder gate of
+        Standard    | i <  j -> True
+        Generalized | i /= j -> True
+        _                    -> False
 
-instance Bounded Gate where
-    minBound = validMinBound
-    maxBound = validMaxBound
+newtype Gate (o :: SortingOrder) = ValidGate (Valid (ComparatorGate o))
+        deriving newtype (Eq, Ord, Validatable, Bounded, Enum)
 
-instance Enum Gate where
-    toEnum   = toEnum_enumerable   arrayGate
-    fromEnum = fromEnum_enumerable tableGate
+{-# COMPLETE Gate #-}
 
-tableGate :: Map Gate Int
-tableGate = tableEnumerable
+pattern Gate :: forall o. SortOrder o => Channel -> Channel -> Layer -> Gate o
+pattern Gate i j k <- ValidGate (Valid (ComparatorGate i j k)) where
+    Gate i j k = case sortOrder gate of
+        Standard
+            | i < j     -> gate
+            | otherwise -> error $ "(Standard) Gate i j k: Requires i < j, "
+                ++ "but given was " ++ show i ++ " = i >= j = " ++ show j
+        Generalized
+            | i /= j    -> gate
+            | otherwise -> error $ "(Generalized) Gate i j k: Requires i /= j, "
+                ++ "but given was " ++ show i ++ " = i = j = " ++ show j
+      where
+        gate :: Gate o
+        gate = ValidGate (Valid (ComparatorGate i j k))
 
-arrayGate :: Array Int Gate
-arrayGate = arrayEnumerable
+pattern StandardGate :: Channel -> Channel -> Layer -> StandardGate
+pattern StandardGate i j k = Gate i j k
+
+pattern GeneralizedGate :: Channel -> Channel -> Layer -> GeneralizedGate
+pattern GeneralizedGate i j k = Gate i j k
+
+instance SortOrder o => Show (Gate o) where
+    show gate@(Gate i j k) = show (sortOrder gate) ++ "Gate " 
+        ++ show i ++ " " ++ show j ++ " " ++ show k
+
+instance SortOrder o => Enumerable (Gate o) where
+    enumerated = boundedEnumerated
+    cardinality = boundedCardinality

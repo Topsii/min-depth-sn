@@ -84,8 +84,8 @@ afterLayers = map after layers
 beforeLayers :: [BetweenLayers]
 beforeLayers = map before layers
 
-type N = 4
-type D = 3
+type N = 8
+type D = 6
 
 newtype Channel = Channel (Finite N)
     deriving

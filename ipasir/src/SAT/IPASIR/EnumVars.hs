@@ -1,5 +1,6 @@
 {-# language RankNTypes #-}
 {-# language GeneralizedNewtypeDeriving #-}
+{-# language StandaloneDeriving #-}
 {-# language DeriveFunctor #-}
 
 module SAT.IPASIR.EnumVars where
@@ -8,7 +9,7 @@ import Control.Monad ((>=>))
 import Foreign.C.Types (CInt)
 
 import qualified SAT.IPASIR.IntegralLits as DIMACS
-import SAT.IPASIR.IntegralLits (ipasirAdd, ipasirSolve, finalizeClause, trueAssignmentsOf, falseAssignmentsOf, assignmentsOf)
+import SAT.IPASIR.IntegralLits (ipasirAdd, ipasirSolve, finalizeClause, trueAssignedVarsOf, falseAssignedVarsOf, assignmentsOf)
 
 -- newtype Solver
 -- ensure correct state: input/sat/unsat
@@ -31,8 +32,17 @@ runSolver solver = DIMACS.runSolver (unSolver solver)
 newtype Var a = Var { unVar :: a }
     deriving (Functor)
 
+deriving instance Eq a => Eq (Var a)
+deriving instance Ord a => Ord (Var a)
+deriving instance Bounded a => Bounded (Var a)
+deriving instance Enum a => Enum (Var a)
+
 data Lit a = Pos (Var a) | Neg (Var a)
     deriving (Functor)
+
+deriving instance Eq a => Eq (Lit a)
+deriving instance Ord a => Ord (Lit a)
+
 
 polarize :: Bool -> Var x -> Lit x
 polarize polarity var = case polarity of
@@ -55,9 +65,6 @@ class Dimacs a where
     -- neg (fromDimacs x) == fromDimacs (-x)
     fromDIMACS :: CInt -> a
 
-instance Bounded a => Bounded (Var a) where
-    minBound = Var minBound
-    maxBound = Var maxBound
 
 instance Show a => Show (Var a) where
     show (Var x) = 'v' : show x
@@ -68,8 +75,8 @@ instance Show a => Show (Lit a) where
         Neg v -> '-' : show v
 
 instance Enum a => Dimacs (Var a) where
-    toDIMACS (Var var) = fromIntegral (fromEnum var) + 1
-    fromDIMACS int = Var $ toEnum (fromIntegral int - 1)
+    toDIMACS var = fromIntegral (fromEnum var) + 1
+    fromDIMACS int = toEnum (fromIntegral int - 1)
 
 instance Enum a => Dimacs (Lit a) where
     toDIMACS lit = case lit of
@@ -96,11 +103,11 @@ solve cnfs = mapM_ addCNF cnfs >> Solver ipasirSolve
 assignmentsOfRange :: Enum v => Var v -> Var v ->  Solver s v [Bool]
 assignmentsOfRange from to = Solver $ assignmentsOf $ range from to
 
-trueAssignmentsOfRange :: Enum v => Var v -> Var v ->  Solver s v [Var v]
-trueAssignmentsOfRange from to = Solver $ map fromDIMACS <$> trueAssignmentsOf (range from to)
+trueAssignedVarsOfRange :: Enum v => Var v -> Var v ->  Solver s v [Var v]
+trueAssignedVarsOfRange from to = Solver $ map fromDIMACS <$> trueAssignedVarsOf (range from to)
 
-falseAssignmentsOfRange :: Enum v => Var v -> Var v ->  Solver s v [Var v]
-falseAssignmentsOfRange from to = Solver $ map fromDIMACS <$> falseAssignmentsOf (range from to)
+falseAssignedVarsOfRange :: Enum v => Var v -> Var v ->  Solver s v [Var v]
+falseAssignedVarsOfRange from to = Solver $ map fromDIMACS <$> falseAssignedVarsOf (range from to)
 
 -- what if from minBound to maxBound is queried, but maxBound was never added as a literal?
 range :: Enum a => Var a -> Var a -> [CInt]

@@ -33,6 +33,8 @@ library:
   - finite-typelits
   - ghc-typelits-natnormalise
   - ghc-typelits-knownnat
+  #- profunctors
+  #- lens
 
 executables:
   MinDepthSN-exe:

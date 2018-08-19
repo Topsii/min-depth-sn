@@ -1,11 +1,13 @@
 {-# LANGUAGE RebindableSyntax #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module MinDepthSN.SAT.Synthesis.ConstraintsBZ where
 
 import Prelude hiding (negate)
 import SAT.IPASIR.EnumVars (Var(..), Lit, negate, polarize)
-import MinDepthSN.SAT.Synthesis.VarsBZ (NetworkSynthesis(Value_), gateOrUnusedLit, unusedLit, gateLit)
+import MinDepthSN.SAT.Synthesis.VarsBZ (NetworkSynthesis(Value_), StandardNetworkSynthesis, gateOrUnusedLit, unusedLit, gateLit)
 import Numeric.Natural (Natural)
+import Enumerate (enumerated)
 import MinDepthSN.SAT.Constraints 
     ( fixGateOrUnused
     , litImplies
@@ -13,9 +15,11 @@ import MinDepthSN.SAT.Constraints
     , noneOf
     )
 import MinDepthSN.Data.Value (Value, inputValues, outputValues)
-import MinDepthSN.Data.GateOrUnused (GateOrUnused(..))
-import MinDepthSN.Data.Size (Layer, channels, channelsAfter, channelsBefore, channelsBetween, layers, n)
+import MinDepthSN.Data.GateOrUnused (GateOrUnused(..), SortOrder)
+import MinDepthSN.Data.Size (Layer, channels, channelsAfter, channelsBetween, layers, n)
 import Data.List (sort)
+
+import MinDepthSN.Data.Gate (SortingOrder(..), sortOrder)
 
 -- | Each channel \(i\) is either compared with some channel \(j\) or not 
 -- used in layer \(k\).
@@ -49,15 +53,21 @@ import Data.List (sort)
 -- Notably there are additional two-literal-clauses associating \(g_{j,i}^k\) 
 -- with \(unused_i^k\). Such clauses were not contained in previous encodings.
 --
-usage :: [[Lit NetworkSynthesis]]
+usage :: forall o. SortOrder o => [[Lit (NetworkSynthesis o)]]
 usage = concatMap exactlyOneOf
     [
-        [ gateOrUnusedLit i j k
+        concat 
+        [ if sortOrder (GateOrUnused i j k :: GateOrUnused o) == Standard
+            then [ gateOrUnusedLit (min i j) (max i j) k ]
+            else [ gateOrUnusedLit i j k, gateOrUnusedLit j i k ]
         | j <- channels
         ]
     | i <- channels
     , k <- layers
     ]
+
+ifThenElse True t _ = t
+ifThenElse False _ f = f
 
 -- | The first layer is maximal (cf. Bundala and Zavodny "A layer \(L\) is 
 -- called maximal if no more comparators can be added into \(L\)."). Hence there
@@ -78,12 +88,12 @@ usage = concatMap exactlyOneOf
 -- \end{cases}
 -- \]
 --
-maximalFirstLayer :: [[Lit NetworkSynthesis]]
+maximalFirstLayer :: [[Lit (NetworkSynthesis o)]]
 maximalFirstLayer
     | even n = noneOf unusedLitsInFirstLayer
     | otherwise = exactlyOneOf unusedLitsInFirstLayer
   where
-    unusedLitsInFirstLayer :: [Lit NetworkSynthesis]
+    unusedLitsInFirstLayer :: [Lit (NetworkSynthesis o)]
     unusedLitsInFirstLayer = [ unusedLit i 0 | i <- channels ]
 
 -- | Values of a given counterexample input are propagated along the channels 
@@ -106,28 +116,26 @@ maximalFirstLayer
 -- See 'MinDepthSN.SAT.Constraints.litImplies' and
 -- 'MinDepthSN.SAT.Constraints.fixGateOrUnused' for the CNF.
 --
-update :: Natural ->  [[Lit NetworkSynthesis]]
+update :: forall o. SortOrder o => Natural -> [[Lit (NetworkSynthesis o)]]
 update cexIdx = concat
     [-- TODO: replace (map . map . fmap) by fmap for a CNF datatype like: data CNF a = CNF [[Lit a]] deriving Functor
-        gateOrUnusedLit i j k `litImplies` (map . map . fmap) (Value_ cexIdx) (fixGateOrUnused (GateOrUnused i j k))
-    | i <- channels
-    , j <- i : channelsAfter i
-    , k <- layers
+        gateOrUnusedLit i j k `litImplies` (map . map . fmap) (Value_ cexIdx) (fixGateOrUnused (GateOrUnused i j k :: GateOrUnused o))
+    | GateOrUnused i j k <- enumerated :: [GateOrUnused o]
     ]
 
-sorts :: Natural -> [Bool] -> [[Lit NetworkSynthesis]]
+sorts :: SortOrder o => Natural -> [Bool] -> [[Lit (NetworkSynthesis o)]]
 sorts cexIdx counterexample = concat
     [ zipWith fixValue counterexample inputValues
     , update cexIdx
     , zipWith fixValue (sort counterexample) outputValues
     ]
   where
-    fixValue :: Bool -> Value -> [Lit NetworkSynthesis]
+    fixValue :: Bool -> Value -> [Lit (NetworkSynthesis o)]
     fixValue polarity val = [polarize polarity . Var $ Value_ cexIdx val]
 
 
 
-outsideSpan :: [[Lit NetworkSynthesis]]
+outsideSpan :: [[Lit StandardNetworkSynthesis]]
 outsideSpan = concat
     [
         gateLit i j k `litImplies` 
@@ -148,12 +156,12 @@ outsideSpan = concat
 
 
 
-maximal :: [[Lit NetworkSynthesis]]
+maximal :: [[Lit (NetworkSynthesis o)]]
 maximal
     | even n    = concat [ noneOf       (unusedLitsInLayer k) | k <- layers ]
     | otherwise = concat [ exactlyOneOf (unusedLitsInLayer k) | k <- layers ]
   where
-    unusedLitsInLayer :: Layer -> [Lit NetworkSynthesis]
+    unusedLitsInLayer :: Layer -> [Lit (NetworkSynthesis o)]
     unusedLitsInLayer k = [ unusedLit i k | i <- channels ]
 
 
