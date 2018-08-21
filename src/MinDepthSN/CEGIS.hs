@@ -14,6 +14,7 @@ main = print networkSolution
 
 networkSolution :: Either [Bool] [GeneralizedGateOrUnused]
 networkSolution = runSolver $ do
+    addCNF representativesOfBzIsomorphicEqClasses
     network <- findNetwork
     let maybeCex = findCounterExample network
     case maybeCex of
@@ -37,7 +38,7 @@ findSortingNetwork cexIdx cex = do
         {-let positions = (map fromDIMACS $ range minCounterExample maxCounterExample) :: [Var CounterExample]
         let positionValues = zip vals positions-}
         case findCounterExample {-$ trace (show network ++ "\n" ++ show positionValues ++ "\n")-} network of
-            Just cex2 -> {-trace (show cex2 ++ "\n") $-} findSortingNetwork (cexIdx + 1) cex2
+            Just cex2 -> trace (show cexIdx ++ ": " ++ show cex2) $ findSortingNetwork (cexIdx + 1) cex2
             Nothing -> return $ Right network
     else return $ Left cex
 

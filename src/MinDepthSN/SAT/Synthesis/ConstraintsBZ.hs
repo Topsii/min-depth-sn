@@ -5,7 +5,7 @@ module MinDepthSN.SAT.Synthesis.ConstraintsBZ where
 
 import Prelude hiding (negate)
 import SAT.IPASIR.EnumVars (Var(..), Lit, negate, polarize)
-import MinDepthSN.SAT.Synthesis.VarsBZ (NetworkSynthesis(Value_), StandardNetworkSynthesis, gateOrUnusedLit, unusedLit, gateLit)
+import MinDepthSN.SAT.Synthesis.VarsBZ (NetworkSynthesis(Value_), StandardNetworkSynthesis, GeneralizedNetworkSynthesis, gateOrUnusedLit, unusedLit, gateLit)
 import Numeric.Natural (Natural)
 import Enumerate (enumerated)
 import MinDepthSN.SAT.Constraints 
@@ -133,7 +133,29 @@ sorts cexIdx counterexample = concat
     fixValue :: Bool -> Value -> [Lit (NetworkSynthesis o)]
     fixValue polarity val = [polarize polarity . Var $ Value_ cexIdx val]
 
-
+-- bad behavior on unused
+representativesOfBzIsomorphicEqClasses :: [[Lit GeneralizedNetworkSynthesis]]
+representativesOfBzIsomorphicEqClasses = concat
+    [ 
+        let predK = pred k 
+        in 
+            [ [ -gateLit i j k, -gateLit h i predK, -gateLit j l predK ]
+            , [ -gateLit i j k, -gateLit h i predK, -gateLit l j predK ]
+            , [ -gateLit i j k, -gateLit i h predK, -gateLit j l predK ]
+            , [ -gateLit i j k, -gateLit i h predK, -gateLit l j predK ]
+            ]
+    | h <- channels
+    , i <- channels
+    , j <- channels
+    , l <- channels
+    , k <- drop 1 layers
+    , i /= j
+    , i /= h
+    , i /= l
+    , j /= h
+    , j /= l
+    , h < l -- TODO
+    ]
 
 outsideSpan :: [[Lit StandardNetworkSynthesis]]
 outsideSpan = concat

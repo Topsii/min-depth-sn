@@ -34,7 +34,7 @@ data SortingOrder = Standard | Generalized
     deriving (Eq, Show)
 
 class SortOrder (o :: SortingOrder) where
-    sortOrder :: f o -> SortingOrder
+    sortOrder :: proxy o -> SortingOrder
 
 instance SortOrder 'Standard where
     sortOrder _ = Standard
