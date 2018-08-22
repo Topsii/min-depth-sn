@@ -49,12 +49,6 @@ data ComparatorGate (o :: SortingOrder) =
     ComparatorGate { minChannel :: Channel, maxChannel :: Channel, layer :: Layer }
     deriving (Eq, Generic, Enumerable, Show)
 
--- isMinMax :: ComparatorGate o -> Bool
-isMinMax gate = minChannel gate < maxChannel gate
-
--- isMaxMin :: ComparatorGate o -> Bool
-isMaxMin = not . isMinMax
-
 instance Ord (ComparatorGate o) where
     compare = comparing layer <> comparing minChannel <> comparing maxChannel
 

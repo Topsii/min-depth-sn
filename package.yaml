@@ -1,10 +1,10 @@
 name:                MinDepthSN
 version:             0.1.0.0
-github:              "githubuser/MinDepthSN"
+git:                 "https://gitlab.informatik.uni-bremen.de/haslop/min-depth-sn"
 license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2018 Author name here"
+author:              "Tobias Haslop"
+maintainer:          "haslop@uni-bremen.de"
+copyright:           "2018 Tobias Haslop"
 
 extra-source-files:
 - README.md
@@ -16,10 +16,19 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/githubuser/MinDepthSN#readme>
+#description:         Please see the README on GitHub at <https://gitlab.informatik.uni-bremen.de/haslop/min-depth-sn#readme>
 
 dependencies:
 - base >= 4.7 && < 5
+
+ghc-options:
+- -Wall
+- -fwarn-incomplete-patterns
+- -fwarn-unused-matches
+- -fno-warn-orphans
+- -Werror
+- -Wcompat
+- -O2
 
 library:
   source-dirs: src
@@ -40,13 +49,6 @@ executables:
   MinDepthSN-exe:
     main:                Main.hs
     source-dirs:         app
-    ghc-options:
-    - -Wall
-    - -fwarn-incomplete-patterns
-    - -fwarn-unused-matches
-    - -fno-warn-orphans
-    - -Werror
-    - -O2
     dependencies:
     - MinDepthSN
 
