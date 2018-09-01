@@ -15,8 +15,7 @@ build-tools:
 dependencies:
 - base >= 4.7 && < 5
 - transformers
-- indexed-extras
-- Kleislify
+# - indexed-extras
 library:
   source-dirs: src
   extra-libraries: 

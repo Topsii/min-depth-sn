@@ -32,7 +32,6 @@ module MinDepthSN.SAT.Synthesis.VarsBZ
 import SAT.IPASIR.EnumVars (Solver, Var(..), Lit(..), trueAssignedVarsOfRange, falseAssignedVarsOfRange, assignmentsOfRange)
 
 import Numeric.Natural
-import Enumerate.Enum.Valid (Validatable, isValid)
 import MinDepthSN.Data.Size (Channel, Layer, BetweenLayers)
 import MinDepthSN.Data.GateOrUnused 
     ( GateOrUnused(..)
@@ -121,12 +120,6 @@ instance SortOrder o => Show (NetworkSynthesis o) where
     show var = case var of
         GateOrUnused_ gu -> show gu
         Value_ cexIdx val -> show cexIdx ++ " " ++ show val
-
-instance SortOrder o => Validatable (NetworkSynthesis o) where
-    isValid var = case var of
-        GateOrUnused_ gu -> isValid gu
-        Value_ _ val -> isValid val
-
 
 -- | NetworkSynthesis values are enumerated as follows starting from 0:
 -- where

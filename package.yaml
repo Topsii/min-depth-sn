@@ -25,7 +25,6 @@ ghc-options:
 - -Wall
 - -fwarn-incomplete-patterns
 - -fwarn-unused-matches
-- -fno-warn-orphans
 - -Werror
 - -Wcompat
 - -O2

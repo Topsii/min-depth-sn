@@ -25,8 +25,6 @@ module MinDepthSN.Data.GateOrUnused
     , StandardGateOrUnused
     , GeneralizedGateOrUnused
     ) where
-
-import Enumerate.Enum.Valid (Validatable, isValid)
 import Enumerate
     ( Enumerable
     , enumerated
@@ -102,11 +100,6 @@ instance SortOrder o => Show (GateOrUnused o) where
     show gu = case gu of
         (Gate_ g)   -> show g
         (Unused_ u) -> show u
-
-instance SortOrder o => Validatable (GateOrUnused o) where
-    isValid gu = case gu of
-        Gate_ g   -> isValid g
-        Unused_ u -> isValid u
 
 instance SortOrder o => Bounded (GateOrUnused o) where
     minBound = min (Gate_ minBound) (Unused_ minBound)

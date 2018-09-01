@@ -2,12 +2,16 @@
 {-# language DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 
-module MinDepthSN.Data.GateOut where
+module MinDepthSN.Data.GateOut
+    ( GateOut(GateOut)
+    ) where
 
 import Data.Ord (comparing)
 import Data.Monoid ((<>))
-import MinDepthSN.Data.Size (Gate, Layer)
+import MinDepthSN.Data.Size (GateInLayer, Layer)
 import GHC.Generics (Generic)
 import Enumerate
     ( Enumerable
@@ -16,18 +20,18 @@ import Enumerate
     , cardinality
     , boundedCardinality
     )
-import Enumerate.Enum.Valid (Validatable, Valid, isValid)
+import Enumerate.Enum.Valid (Validatable, Valid(..), isValid)
 
-data ComparatorGateOut = ComparatorGateOut {
-    minForwardGate :: Gate,
-    maxForwardGate :: Gate,
-    gate :: Gate,
+data UnvalidatedGateOut = UnvalidatedGateOut {
+    minForwardGate :: GateInLayer,
+    maxForwardGate :: GateInLayer,
+    gate :: GateInLayer,
     minForwardLayer :: Layer,
     maxForwardLayer :: Layer,
     layer :: Layer
 } deriving (Eq, Generic, Enumerable, Show)
 
-instance Ord ComparatorGateOut where
+instance Ord UnvalidatedGateOut where
     compare = 
         comparing layer <> 
         comparing minForwardLayer <> 
@@ -36,11 +40,16 @@ instance Ord ComparatorGateOut where
         comparing minForwardGate <> 
         comparing maxForwardGate
 
-instance Validatable ComparatorGateOut where
-    isValid go = layer go < minForwardLayer go && layer go < maxForwardLayer go
 
-newtype GateOut = ValidGateOut (Valid ComparatorGateOut)
+instance Validatable UnvalidatedGateOut where
+    isValid UnvalidatedGateOut {..} =
+        layer < minForwardLayer && layer < maxForwardLayer
+
+newtype GateOut = ValidGateOut (Valid UnvalidatedGateOut)
     deriving newtype (Eq, Ord, Validatable, Bounded, Enum)
+
+pattern GateOut :: GateInLayer -> GateInLayer -> GateInLayer -> Layer -> Layer -> Layer -> GateOut
+pattern GateOut a b c d e f = ValidGateOut (Valid (UnvalidatedGateOut a b c d e f))
 
 instance Enumerable GateOut where
     enumerated = boundedEnumerated

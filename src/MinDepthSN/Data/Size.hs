@@ -1,16 +1,16 @@
 {-# language DataKinds #-}
 {-# language TypeOperators #-}
 {-# language GeneralizedNewtypeDeriving #-}
+{-# language TypeFamilies #-}
 
 module MinDepthSN.Data.Size 
-    ( 
+    ( preceding
+    , succeeding
+    , between
     -- * Channel
-      Channel
+    , Channel
     , n
     , channels
-    , channelsBefore
-    , channelsAfter
-    , channelsBetween
     -- * Layer
     , Layer
     , d
@@ -23,12 +23,17 @@ module MinDepthSN.Data.Size
     , afterLastLayer
     , beforeLayers
     , afterLayers
-    -- * Gate
-    , Gate
+    -- * GateInLayer
+    , GateInLayer
+    , gatesInLayer
+    , maxForwardChannel
+    , minForwardChannel
     ) where
 
-import Data.Finite (Finite, weaken, shiftN)
-import GHC.TypeNats (KnownNat, Div, type (+))
+import Control.Monad (join)
+import Data.Maybe (fromJust)
+import Data.Finite (Finite, weaken, shiftN, weakenN, shift, add, strengthen )
+import GHC.TypeNats (Div, type (+), type (*), KnownNat)
 import Enumerate
     ( Enumerable
     , enumerated
@@ -44,27 +49,29 @@ d:: Int
 d = length layers
 
 channels :: [Channel]
-channels = [ minBound .. maxBound ]
+channels = enumerated
 
-channelsBefore :: Channel -> [Channel]
-channelsBefore c
-    | c == minBound = []
-    | otherwise = [ minBound .. pred c ]
+-- | > preceding x == [ minBound .. pred x ]
+preceding :: (Eq a, Bounded a, Enum a) => a -> [a]
+preceding x
+    | x == minBound = []
+    | otherwise = [ minBound .. pred x ]
 
-channelsAfter :: Channel -> [Channel]
-channelsAfter c
-    | c == maxBound = []
-    | otherwise = [ succ c .. maxBound ]
+-- | > succeeding a == [ succ x .. maxBound ]
+succeeding :: (Eq a, Bounded a, Enum a) => a -> [a]
+succeeding x
+    | x == maxBound = []
+    | otherwise = [ succ x .. maxBound ]
 
--- |    channelsBetween a b == [a+1, a+2, .. b-2, b-1]
-channelsBetween :: Channel -> Channel -> [Channel]
-channelsBetween from to
+-- | > between from to == [ succ from .. pred to ]
+between :: (Eq a, Bounded a, Enum a) => a -> a -> [a]
+between from to
     | from == maxBound = []
     | to == minBound = []
     | otherwise = [ succ from .. pred to ]
 
 layers :: [Layer]
-layers = [ 0 .. maxBound ]
+layers = enumerated
 
 before :: Layer -> BetweenLayers
 before (Layer k) = BetweenLayers $ weaken k
@@ -84,8 +91,28 @@ afterLayers = map after layers
 beforeLayers :: [BetweenLayers]
 beforeLayers = map before layers
 
-type N = 10
-type D = 7
+minForwardChannel :: GateInLayer -> Channel
+minForwardChannel (GateInLayer g) = Channel . weakenIfOddN . timesTwo $ g
+
+maxForwardChannel :: GateInLayer -> Channel
+maxForwardChannel (GateInLayer g) = Channel . weakenIfOddN . timesTwoPlusOne $ g
+
+weakenIfOddN :: Finite ((N `Div` 2) * 2) -> Finite N
+weakenIfOddN = weakenN
+
+timesTwo :: Finite n -> Finite (n + n)
+timesTwo = join add
+
+-- there is no such KnownNat m for n ~ 0, thus maxForwardChannel does not work 
+-- for N = 0 or N = 1, since (N `Div` 2) ~ 0 in thoses cases.
+timesTwoPlusOne :: (KnownNat m, KnownNat n, (n+n) ~ (m+1)) => Finite n -> Finite (n + n)
+timesTwoPlusOne = shift . fromJust . strengthen . timesTwo
+
+type N = 8
+type D = 5
+
+gatesInLayer :: [GateInLayer]
+gatesInLayer = enumerated
 
 newtype Channel = Channel (Finite N)
     deriving
@@ -109,7 +136,18 @@ newtype Layer = Layer (Finite D)
     , Ord
     , Real)
 
-newtype Gate = Gate (Finite (N `Div` 2))
+newtype GateInLayer = GateInLayer (Finite (N `Div` 2))
+    deriving
+    ( Bounded
+    , Enum
+    , Eq
+    , Integral -- ^ __Not__ modular arithmetic.
+    , Num      -- ^ Modular arithmetic. Only the fromInteger function 
+                -- is supposed to be useful.
+    , Ord
+    , Real)
+
+newtype UsedChannel = UsedChannel (Finite ((N `Div` 2) * 2))
     deriving
     ( Bounded
     , Enum
@@ -142,12 +180,8 @@ instance (Show Layer) where
     show (Layer k) = show $ toInteger k
 instance (Show BetweenLayers) where
     show (BetweenLayers k) = show $ toInteger k
-instance (Show Gate) where
-    show (Gate a) = show $ toInteger a
-
-instance KnownNat n => Enumerable (Finite n) where
-    enumerated = boundedEnumerated
-    cardinality = boundedCardinality
+instance (Show GateInLayer) where
+    show (GateInLayer a) = show $ toInteger a
 
 instance Enumerable Channel where
     enumerated = boundedEnumerated
@@ -161,6 +195,6 @@ instance Enumerable BetweenLayers where
     enumerated = boundedEnumerated
     cardinality = boundedCardinality
 
-instance Enumerable Gate where
+instance Enumerable GateInLayer where
     enumerated = boundedEnumerated
     cardinality = boundedCardinality

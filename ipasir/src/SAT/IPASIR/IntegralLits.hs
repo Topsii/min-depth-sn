@@ -4,7 +4,6 @@ module SAT.IPASIR.IntegralLits
     ) where
 
 import Control.Monad (filterM, (>=>))
-import Control.Kleislify ((=>^))
 
 import Foreign.C.Types (CInt)
 import SAT.IPASIR.Bindings
@@ -31,7 +30,7 @@ isTrue :: CInt -> Solver s Bool
 isTrue = ipasirVal
 
 isFalse :: CInt -> Solver s Bool
-isFalse = ipasirVal =>^ not
+isFalse lit = not <$> ipasirVal lit
 
 trueAssignedVarsOf :: [CInt] -> Solver s [CInt]
 trueAssignedVarsOf = filterM isTrue

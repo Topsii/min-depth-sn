@@ -1,8 +1,12 @@
 {-# language ScopedTypeVariables #-}
 {-# language StandaloneDeriving #-}
 {-# language GeneralizedNewtypeDeriving #-}
+{-# language PatternSynonyms #-}
 
-module Enumerate.Enum.Valid where
+module Enumerate.Enum.Valid
+    ( Valid(Valid)
+    , Validatable(..)
+    ) where
 
 import Data.List (sort)
 import Data.Map.Strict (Map)
@@ -18,7 +22,14 @@ import Enumerate.Enum (toEnum_enumerable, fromEnum_enumerable)
 class Validatable a where
     isValid :: a -> Bool
 
-newtype Valid a = Valid a
+newtype Valid a = Validated a
+
+pattern Valid :: (Validatable a, Show a) => a -> Valid a
+pattern Valid a <- Validated a
+  where
+    Valid a
+        | isValid a = Validated a
+        | otherwise = error $ "Invalid " ++ show a
 
 deriving instance Eq a => Eq (Valid a)
 deriving instance Ord a => Ord (Valid a)
@@ -38,7 +49,7 @@ instance (Enumerable a, Validatable a, Ord a) => Enum (Valid a) where
     fromEnum = fromEnum_enumerable tableEnumerable
 
 validEnumerated :: (Enumerable a, Validatable a, Ord a) => [Valid a]
-validEnumerated = map Valid . sort . filter isValid $ enumerated
+validEnumerated = map Validated . sort . filter isValid $ enumerated
 
 arrayEnumerable :: forall a. (Enumerable a, Validatable a, Ord a) => Array Int (Valid a) --TODO
 arrayEnumerable = Array.listArray (0, length valids - 1) valids --TODO is array efficient?

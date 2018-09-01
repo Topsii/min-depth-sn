@@ -16,7 +16,7 @@ import MinDepthSN.SAT.Constraints
     )
 import MinDepthSN.Data.Value (Value, inputValues, outputValues)
 import MinDepthSN.Data.GateOrUnused (GateOrUnused(..), SortOrder)
-import MinDepthSN.Data.Size (Layer, channels, channelsAfter, channelsBetween, layers, n)
+import MinDepthSN.Data.Size (Layer, channels, succeeding, between, layers, n)
 import Data.List (sort)
 
 import MinDepthSN.Data.Gate (SortingOrder(..), sortOrder)
@@ -169,11 +169,11 @@ outsideSpan = concat
 -- spanning from (the first?) layer to layer x?
 -- must be set for diff in and out value on same chan
     | i <- channels
-    , j <- channelsAfter i
+    , j <- succeeding i
     , k <- layers
     , l <- [ minBound .. k ]
-    , o <- i : channelsBetween i j
-    , p <- j : channelsBetween i j
+    , o <- i : between i j
+    , p <- j : between i j
     , k /= l
     ]
 
