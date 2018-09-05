@@ -4,8 +4,8 @@
 module MinDepthSN.SAT.Synthesis.ConstraintsBZ where
 
 import Prelude hiding (negate)
-import SAT.IPASIR.EnumVars (Var(..), Lit, negate, polarize)
-import MinDepthSN.SAT.Synthesis.VarsBZ (NetworkSynthesis(Value_), StandardNetworkSynthesis, GeneralizedNetworkSynthesis, gateOrUnusedLit, unusedLit, gateLit)
+import SAT.IPASIR.EnumVarSolver (Var(..), Lit, negate, polarize, lit)
+import MinDepthSN.SAT.Synthesis.VarsBZ (NetworkSynthesis(Value_), StandardNetworkSynthesis, GeneralizedNetworkSynthesis)
 import Numeric.Natural (Natural)
 import Enumerate (enumerated)
 import MinDepthSN.SAT.Constraints 
@@ -15,11 +15,12 @@ import MinDepthSN.SAT.Constraints
     , noneOf
     )
 import MinDepthSN.Data.Value (Value, inputValues, outputValues)
-import MinDepthSN.Data.GateOrUnused (GateOrUnused(..), SortOrder)
+import MinDepthSN.Data.GateOrUnused (GateOrUnused(..), gateOrUnusedLit)
+import MinDepthSN.Data.Unused (unusedLit)
+import MinDepthSN.Data.Gate (SortOrder, SortingOrder(..), sortOrder, gateLit)
 import MinDepthSN.Data.Size (Layer, channels, succeeding, between, layers, n)
 import Data.List (sort)
 
-import MinDepthSN.Data.Gate (SortingOrder(..), sortOrder)
 
 -- | Each channel \(i\) is either compared with some channel \(j\) or not 
 -- used in layer \(k\).
@@ -47,8 +48,7 @@ import MinDepthSN.Data.Gate (SortingOrder(..), sortOrder)
 -- Further note that \(gu_{i,j}^k\) and \(gu_{j,i}^k\) refer to the same
 -- variable.
 --
--- For the definition of \(gu\) see 
--- 'MinDepthSN.SAT.Synthesis.Variables.GateOrUnusedVar'.
+-- For the definition of \(gu\) see 'MinDepthSN.Data.GateOrUnused.GateOrUnused'.
 --
 -- Notably there are additional two-literal-clauses associating \(g_{j,i}^k\) 
 -- with \(unused_i^k\). Such clauses were not contained in previous encodings.
@@ -58,7 +58,7 @@ usage = concatMap exactlyOneOf
     [
         concat 
         [ if sortOrder (GateOrUnused i j k :: GateOrUnused o) == Standard
-            then [ gateOrUnusedLit (min i j) (max i j) k ]
+            then [ lit $ (GateOrUnused (min i j) (max i j) k :: GateOrUnused o) ]
             else [ gateOrUnusedLit i j k, gateOrUnusedLit j i k ]
         | j <- channels
         ]
@@ -89,7 +89,7 @@ ifThenElse False _ f = f
 -- \end{cases}
 -- \]
 --
-maximalFirstLayer :: [[Lit (NetworkSynthesis o)]]
+maximalFirstLayer :: forall o. SortOrder o => [[Lit (NetworkSynthesis o)]]
 maximalFirstLayer
     | even n = noneOf unusedLitsInFirstLayer
     | otherwise = exactlyOneOf unusedLitsInFirstLayer
@@ -100,8 +100,7 @@ maximalFirstLayer
 -- | Values of a given counterexample input are propagated along the channels 
 -- according to the placement of the comparators.
 --
--- For the definition of \(gu\) see 
--- 'MinDepthSN.SAT.Synthesis.Variables.GateOrUnusedVar'.
+-- For the definition of \(gu\) see 'MinDepthSN.Data.GateOrUnused.GateOrUnused'.
 --
 -- \[
 -- \bigwedge_{0 \le i \le j < n} \ 
@@ -179,7 +178,7 @@ outsideSpan = concat
 
 
 
-maximal :: [[Lit (NetworkSynthesis o)]]
+maximal :: forall o. SortOrder o => [[Lit (NetworkSynthesis o)]]
 maximal
     | even n    = concat [ noneOf       (unusedLitsInLayer k) | k <- layers ]
     | otherwise = concat [ exactlyOneOf (unusedLitsInLayer k) | k <- layers ]

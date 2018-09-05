@@ -4,7 +4,7 @@ module MinDepthSN.SAT.CounterExample.Constraints where
 
 import Prelude hiding (negate)
 import Data.List (inits, tails)
-import SAT.IPASIR.EnumVars (Var(..), Lit(..), negate)
+import SAT.IPASIR.EnumVarSolver (Var(..), Lit(..), negate)
 import MinDepthSN.SAT.Constraints (fixGateOrUnused)
 import MinDepthSN.SAT.CounterExample.Variables (CounterExample(..), valueLit)
 import MinDepthSN.Data.Size (channels, succeeding, afterLastLayer)
@@ -26,15 +26,15 @@ import MinDepthSN.Data.GateOrUnused (GateOrUnused, SortOrder)
 -- \bigwedge_{0 \le i < j < n}
 --      \left( \neg v_i^d \vee v_j^d \right)
 -- \]
-sorted :: [[Lit CounterExample]]
-sorted =
+sortedOutput :: [[Lit CounterExample]]
+sortedOutput =
     [
         [ -valueLit i afterLastLayer, valueLit j afterLastLayer ]
     | i <- channels
     , j <- succeeding i
     ]
 
--- | The output of the network is unsorted.
+-- | The output of the network is not sorted.
 --
 -- Excludes for e.g. \(n=3\) the output vectors: 000, 001, 011, 111.
 -- To exclude a vector its negated literals are combined to a CNF clause.
@@ -49,13 +49,13 @@ sorted =
 --             \neg v_j^d
 --     \right)
 -- \]
-unsorted :: [[Lit CounterExample]]
-unsorted = zipWith (++) (inits outputOnes) (tails outputZeros)
+unsortedOutput :: [[Lit CounterExample]]
+unsortedOutput = zipWith (++) (inits outputOnes) (tails outputZeros)
   where
     outputZeros ::  [Lit CounterExample]
-    outputZeros = map (Neg . Var . CounterExample) outputValues
+    outputZeros = map (Negative . Var . CounterExample) outputValues
     outputOnes :: [Lit CounterExample]
-    outputOnes = map (Pos . Var . CounterExample) outputValues
+    outputOnes = map (Positive . Var . CounterExample) outputValues
 
 -- | See 'MinDepthSN.SAT.Constraints.fixGateOrUnused'.
 fixNetwork :: SortOrder o => [GateOrUnused o] -> [[Lit CounterExample]]

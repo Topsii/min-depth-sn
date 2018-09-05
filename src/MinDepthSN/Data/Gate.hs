@@ -8,6 +8,8 @@
 {-# language DeriveAnyClass #-}
 {-# language PatternSynonyms #-}
 
+{-# language FlexibleContexts #-}
+
 module MinDepthSN.Data.Gate
     ( Gate
         ( Gate
@@ -19,6 +21,7 @@ module MinDepthSN.Data.Gate
     , SortingOrder(..)
     , SortOrder
     , sortOrder
+    , gateLit
     ) where
 
 import Data.Ord (comparing)
@@ -32,6 +35,7 @@ import Enumerate
     , boundedCardinality
     )
 import Enumerate.Enum.Valid (Validatable, Valid(..), isValid)
+import SAT.IPASIR.EnumVarSolver (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size (Channel, Layer)
 
 data SortingOrder = Standard | Generalized
@@ -62,6 +66,8 @@ instance SortOrder o => Validatable (UnvalidatedGate o) where
         Generalized | i /= j -> True
         _                    -> False
 
+-- | @Gate i j k@ creates a variable \(g_{i,j}^k\) representing a
+-- comparator gate where \(i\) and \(j\) are the channels and \(k\) is the layer.
 newtype Gate (o :: SortingOrder) = ValidGate (Valid (UnvalidatedGate o))
         deriving newtype (Eq, Ord, Validatable, Bounded, Enum)
 
@@ -85,3 +91,9 @@ instance SortOrder o => Show (Gate o) where
 instance SortOrder o => Enumerable (Gate o) where
     enumerated = boundedEnumerated
     cardinality = boundedCardinality
+
+-- | Literal of 'Gate' with positive polarity.
+gateLit 
+    :: forall v o. (AsVar (v o) (Gate o), SortOrder o) 
+    => Channel -> Channel -> Layer -> Lit (v o)
+gateLit i j k = lit (Gate i j k :: Gate o)

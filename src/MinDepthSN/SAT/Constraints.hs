@@ -5,7 +5,7 @@ module MinDepthSN.SAT.Constraints where
 
 import Prelude hiding (negate, maximum, minimum)
 import Data.List (inits, nub)
-import SAT.IPASIR.EnumVars (Var(..), Lit(..), negate)
+import SAT.IPASIR.EnumVarSolver (Var(..), Lit(..), negate)
 import MinDepthSN.Data.Size (Channel, BetweenLayers, before, after)
 import MinDepthSN.Data.Value (Value(..))
 import MinDepthSN.Data.GateOrUnused (GateOrUnused(..), SortOrder)
@@ -15,8 +15,7 @@ import MinDepthSN.Data.GateOrUnused (GateOrUnused(..), SortOrder)
 -- channels \(i\) and \(j\) in layer \(k\) if \(i<j\) or does not use it if 
 -- \(i=j\).
 --
--- For the definition of \(gu\) see 
--- 'MinDepthSN.SAT.Synthesis.Variables.GateOrUnusedVar'.
+-- For the definition of \(gu\) see 'MinDepthSN.Data.GateOrUnused.GateOrUnused'.
 --
 -- \[
 -- \left( v_i^{k+1} \leftrightarrow \left( v_i^k \wedge v_j^k \right) \right)
@@ -40,7 +39,7 @@ fixGateOrUnused (GateOrUnused i j k) =
     outMax = valueLit j afterK
 
 valueLit :: Channel -> BetweenLayers -> Lit Value
-valueLit i k = Pos $ Var $ Value i k
+valueLit i k = Positive $ Var $ Value i k
 
 -- | @minimum a b min@ ensures \(a \wedge b \leftrightarrow min\).
 --

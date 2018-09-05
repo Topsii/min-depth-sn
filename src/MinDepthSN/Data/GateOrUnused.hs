@@ -5,6 +5,8 @@
 {-# LANGUAGE KindSignatures #-}
 
 
+{-# language FlexibleContexts #-}
+
 module MinDepthSN.Data.GateOrUnused
     ( GateOrUnused
         ( GateOrUnused
@@ -18,12 +20,11 @@ module MinDepthSN.Data.GateOrUnused
         , GeneralizedGate_
         , ..
         )
-    , Gate
-    , Unused
     , SortingOrder(..)
     , SortOrder
     , StandardGateOrUnused
     , GeneralizedGateOrUnused
+    , gateOrUnusedLit
     ) where
 import Enumerate
     ( Enumerable
@@ -32,6 +33,7 @@ import Enumerate
     , cardinality
     , boundedCardinality
     )
+import SAT.IPASIR.EnumVarSolver (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size (Channel, Layer)
 import MinDepthSN.Data.Gate 
     ( Gate
@@ -48,6 +50,26 @@ import qualified MinDepthSN.Data.Unused as Unused
 type StandardGateOrUnused = GateOrUnused 'Standard
 type GeneralizedGateOrUnused = GateOrUnused 'Generalized
 
+-- | A variable \(gu_{i,j}^k\) is either a comparator \(g\)ate variable or an 
+-- \(u\)nused variable.
+--
+-- \[
+-- gu_{i,j}^k :=    
+--      \begin{cases}
+--          g_{i,j}^k  & \text{if}\ i \neq j \\
+--          unused_i^k & \text{otherwise}
+--      \end{cases}
+-- \]
+--
+-- For \(g_{i,j}^k\) see 'MinDepthSN.Data.Gate.Gate' and for \(unused_i^k\) see 'MinDepthSN.Data.Unused.Unused'
+--
+-- This enables a terser definition of the \(used\), \(once\) and \(update\) constraints
+-- from the original encoding of Bundala and Zavodny.
+-- See 'MinDepthSN.SAT.Synthesis.Constraints.usageOnce' and 'MinDepthSN.SAT.Synthesis.Constraints.unused'
+--
+-- The solver does not actually create, consider or solve \(gu_{i,j}^k\) 
+-- variables. For any occurrence of \(gu_{i,j}^k\) in formulas or clauses, its 
+-- definition is passed to the solver instead.
 data GateOrUnused (o :: SortingOrder) 
     = Gate_ (Gate o)
     | Unused_ Unused
@@ -84,7 +106,7 @@ pattern GateOrUnused i j k <- (matchGateOrUnused -> (i, j, k)) where
         | otherwise = Unused i k
 
 matchGateOrUnused :: SortOrder o => GateOrUnused o -> (Channel, Channel, Layer)
-matchGateOrUnused v = case v of
+matchGateOrUnused gu = case gu of
     Gate i j k -> (i, j, k)
     Unused i k -> (i, i, k)
 
@@ -105,9 +127,7 @@ instance SortOrder o => Bounded (GateOrUnused o) where
     minBound = min (Gate_ minBound) (Unused_ minBound)
     maxBound = max (Gate_ maxBound) (Unused_ maxBound)
 
-
 -- offset = sum . init . (0 :) . map cardinality $ [Proxy :: Proxy Unused, Proxy, Proxy]
-
 
 instance SortOrder o => Enum (GateOrUnused o) where
     toEnum i
@@ -135,3 +155,9 @@ instance SortOrder o => Enum (GateOrUnused o) where
 instance SortOrder o => Enumerable (GateOrUnused o) where
     enumerated = boundedEnumerated
     cardinality = boundedCardinality
+
+-- | Literal of 'GateOrUnused' with positive polarity.
+gateOrUnusedLit 
+    :: forall v o. (AsVar (v o) (GateOrUnused o), SortOrder o) 
+    => Channel -> Channel -> Layer -> Lit (v o)
+gateOrUnusedLit i j k = lit (GateOrUnused i j k :: GateOrUnused o)

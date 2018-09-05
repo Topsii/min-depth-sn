@@ -2,13 +2,14 @@ module MinDepthSN.CEGIS where
 
 import Data.List
 import Data.Bits
-import SAT.IPASIR.EnumVars
+import Enumerate ( enumerated )
+import SAT.IPASIR.EnumVarSolver
 import MinDepthSN.SAT.Synthesis.ConstraintsBZ
 import MinDepthSN.SAT.Synthesis.VarsBZ
 import MinDepthSN.SAT.CounterExample.Constraints
-import MinDepthSN.SAT.CounterExample.Variables
 import MinDepthSN.Data.GateOrUnused
 import MinDepthSN.Data.Size
+import MinDepthSN.Data.Value
 import Numeric.Natural
 import Debug.Trace
 
@@ -32,7 +33,7 @@ findNetwork initCexCnt = do
     let (_, sortsCexs) = mapAccumL (\cIdx cx -> (cIdx+1, sorts cIdx cx)) 0 initCexs
     r <- solve $ usage : sortsCexs
     if r
-        then trueAssignedGateOrUnusedVars
+        then trueAssigned enumerated
         else error "no network was found initially"
 
 prioritizeSmallWindows ::  [[Bool]] -> [[Bool]]
@@ -55,7 +56,7 @@ findSortingNetwork :: SortOrder o => Natural -> [Bool] -> Solver s (NetworkSynth
 findSortingNetwork cexIdx cex = do
     r <- solve [ sorts cexIdx cex ]
     if r then do
-        network <- trueAssignedGateOrUnusedVars
+        network <- trueAssigned enumerated
         {-vals <- assignmentsOfValueVars cexIdx
         let positions = (map fromDIMACS $ range minCounterExample maxCounterExample) :: [Var CounterExample]
         let positionValues = zip vals positions-}
@@ -66,12 +67,12 @@ findSortingNetwork cexIdx cex = do
 
 findCounterExample :: SortOrder o => [GateOrUnused o] -> Maybe [Bool]
 findCounterExample network = runSolver $ do
-    s <- solve [fixNetwork network, unsorted]
+    s <- solve [fixNetwork network, unsortedOutput]
     if s then do
         --vals <- assignmentsOfRange minCounterExample maxCounterExample
         --let positions = (map fromDIMACS $ range minCounterExample maxCounterExample) :: [Var CounterExample]
         --let positionValues = zip vals positions
-        counterExampleInput <- assignmentsOfRange firstInputValueVar lastInputValueVar
+        counterExampleInput <- assignments inputValues
         return $ Just counterExampleInput
         --return $ Just (counterExampleInput, positionValues)
     else return Nothing

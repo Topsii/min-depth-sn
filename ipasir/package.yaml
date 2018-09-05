@@ -8,6 +8,8 @@ ghc-options:
 - -static
 - -optl-static
 - -O2
+- -Wall
+- -Werror
 include-dirs:
 - c-sources
 build-tools:

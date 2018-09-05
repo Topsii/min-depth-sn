@@ -6,8 +6,6 @@ module MinDepthSN.Data.Value
     ( Value(Value)
     , inputValues
     , outputValues
-    , firstInputValue
-    , lastInputValue
     ) where
 
 import Data.Ord (comparing)
@@ -17,6 +15,8 @@ import Enumerate (Enumerable)
 import Enumerate.Enum.Valid (Validatable, isValid)
 import MinDepthSN.Data.Size (Channel, BetweenLayers, n, d, channels, beforeFirstLayer, afterLastLayer)
 
+-- | @Value i k@ creates a variable \(v_i^k\) representing the value on
+-- channel \(i\) between layers \(k\) and \(k+1\).
 data Value = Value { channel :: Channel, betweenLayers :: BetweenLayers }
     deriving (Eq, Generic, Enumerable)
 
@@ -44,9 +44,3 @@ inputValues = [ Value i beforeFirstLayer | i <- channels ]
 
 outputValues :: [Value]
 outputValues = [ Value i afterLastLayer | i <- channels ]
-
-firstInputValue :: Value
-firstInputValue = head inputValues
-
-lastInputValue :: Value
-lastInputValue = last inputValues

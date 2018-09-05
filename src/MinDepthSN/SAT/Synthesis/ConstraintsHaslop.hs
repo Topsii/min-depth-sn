@@ -4,7 +4,7 @@
 module MinDepthSN.SAT.Synthesis.ConstraintsHaslop where
 
 import Prelude hiding (negate)
-import SAT.IPASIR.EnumVars (Var(..), Lit(..), negate)
+import SAT.IPASIR.EnumVarSolver (Var(..), Lit(..), negate)
 import MinDepthSN.Data.GateOut
 import MinDepthSN.Data.Size
 import Enumerate (enumerated)
@@ -21,7 +21,7 @@ canonicalGraph =
     ]
   where
     gateOuts :: [Lit GateOut]
-    gateOuts = map (Pos . Var) enumerated
+    gateOuts = map (Positive . Var) enumerated
 
 minimalRepresentative' :: (a -> a -> Bool) -> (a -> a -> Bool) -> [a] -> [[Lit a]]
 minimalRepresentative' isCongruent isSmaller _ = [  ]
@@ -39,7 +39,7 @@ minimalRepresentative =
         -- instead (GateOut o p b h i k) and (GateOut r s a j l k) is a solution
         -- where we ensure a < b implies GateOut r s (a) j l k < GateOut o p (b) h i k
         -- the brackets indicate that a and b are irrelevant for ordering the GateOuts
-        [ Neg $ Var (GateOut o p a h i k), Neg $ Var (GateOut r s b j l k) ]
+        [ Negative $ Var (GateOut o p a h i k), Negative $ Var (GateOut r s b j l k) ]
     | a <- gatesInLayer
     , b <- succeeding a
     , k <- layers
@@ -60,18 +60,18 @@ minimalRepresentative =
 -- gateInFromGateOut = concat
 --     [
 --         [ 
---             let giMinMin = Pos $ GateIn (minForwardChannel i) (minForwardChannel j) a p o k
---                 giMinMax = Pos $ GateIn (minForwardChannel i) (maxForwardChannel j) a p o k
---                 giMaxMin = Pos $ GateIn (maxForwardChannel i) (minForwardChannel j) a p o k
---                 giMaxMax = Pos $ GateIn (maxForwardChannel i) (maxForwardChannel j) a p o k
+--             let giMinMin = Positive $ GateIn (minForwardChannel i) (minForwardChannel j) a p o k
+--                 giMinMax = Positive $ GateIn (minForwardChannel i) (maxForwardChannel j) a p o k
+--                 giMaxMin = Positive $ GateIn (maxForwardChannel i) (minForwardChannel j) a p o k
+--                 giMaxMax = Positive $ GateIn (maxForwardChannel i) (maxForwardChannel j) a p o k
 --             in
---             [ [Neg . Var $ GateOut a b i k l p, Neg . Var $ GateOut a c j k h o  -- Pos $ GateIn (minForwardChannel i) (minForwardChannel j) a p o k
+--             [ [Negative . Var $ GateOut a b i k l p, Negative . Var $ GateOut a c j k h o  -- Positive $ GateIn (minForwardChannel i) (minForwardChannel j) a p o k
 --             | True --isValid (UnvalidatedGateIn (minForwardChannel i) (minForwardChannel j) a p o k)
 --             ]
 
---         , [ Neg . Var $ GateOut a b i k l p, Neg . Var $ GateOut c a j h k o ]-- Pos $ GateIn (minForwardChannel i) (maxForwardChannel j) a p o k
---         , [ Neg . Var $ GateOut b a i l k p, Neg . Var $ GateOut a c j k h o ]-- Pos $ GateIn (maxForwardChannel i) (minForwardChannel j) a p o k
---         , [ Neg . Var $ GateOut b a i l k p, Neg . Var $ GateOut c a j h k o ]-- Pos $ GateIn (maxForwardChannel i) (maxForwardChannel j) a p o k
+--         , [ Negative . Var $ GateOut a b i k l p, Negative . Var $ GateOut c a j h k o ]-- Positive $ GateIn (minForwardChannel i) (maxForwardChannel j) a p o k
+--         , [ Negative . Var $ GateOut b a i l k p, Negative . Var $ GateOut a c j k h o ]-- Positive $ GateIn (maxForwardChannel i) (minForwardChannel j) a p o k
+--         , [ Negative . Var $ GateOut b a i l k p, Negative . Var $ GateOut c a j h k o ]-- Positive $ GateIn (maxForwardChannel i) (maxForwardChannel j) a p o k
 --         ]
 --     | a <- gatesInLayer
 --     , b <- gatesInLayer

@@ -4,7 +4,7 @@ module Lib
     ) where
 
 
-import SAT.IPASIR.IntegralLits
+import SAT.IPASIR.DimacsSolver
 import Foreign.C.Types (CInt)
 
 
@@ -21,8 +21,8 @@ cnf = [[-1,2,5],[-5,4],[2,3],[1,2,3,4,5],[4,-2],[-2,1],[1,2,4,5]]
 
 someFunc :: IO ()
 someFunc = putStrLn ipasirSignature >> print (runSolver $ do
-    r <- solve cnf
-    vals <- assignmentsOf [1..5] 
+    r <- solveCNF cnf
+    vals <- assignments [1..5] 
     return (r,vals))
 
     

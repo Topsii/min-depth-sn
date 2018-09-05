@@ -108,7 +108,7 @@ timesTwo = join add
 timesTwoPlusOne :: (KnownNat m, KnownNat n, (n+n) ~ (m+1)) => Finite n -> Finite (n + n)
 timesTwoPlusOne = shift . fromJust . strengthen . timesTwo
 
-type N = 8
+type N = 6
 type D = 5
 
 gatesInLayer :: [GateInLayer]
