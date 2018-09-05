@@ -11,7 +11,7 @@ module MinDepthSN.SAT.Synthesis.VarsBZ
     , GeneralizedNetworkSynthesis
     ) where
 
-import SAT.IPASIR.EnumVarSolver (AsVar(..))
+import SAT.IPASIR (AsVar(..))
 
 import Numeric.Natural
 import MinDepthSN.Data.Size (Channel, Layer, BetweenLayers)

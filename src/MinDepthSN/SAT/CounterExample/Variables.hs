@@ -7,7 +7,7 @@ module MinDepthSN.SAT.CounterExample.Variables where
 import Enumerate (Enumerable, enumerated, boundedEnumerated, cardinality, boundedCardinality)
 import Enumerate.Enum.Valid (Validatable)
 
-import SAT.IPASIR.EnumVarSolver (AsVar(..), Var(..), Lit(..))
+import SAT.IPASIR (AsVar(..), Var(..), Lit(..))
 
 import MinDepthSN.Data.Size
 import MinDepthSN.Data.Value
@@ -30,9 +30,3 @@ instance AsVar CounterExample Value where
 
 valueLit :: Channel -> BetweenLayers -> Lit CounterExample
 valueLit i k = Positive (ValueVar i k)
-
-minCounterExample :: Var CounterExample
-minCounterExample = Var minBound
-
-maxCounterExample :: Var CounterExample
-maxCounterExample = Var maxBound

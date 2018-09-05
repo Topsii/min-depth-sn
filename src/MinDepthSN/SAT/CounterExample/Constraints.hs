@@ -4,7 +4,7 @@ module MinDepthSN.SAT.CounterExample.Constraints where
 
 import Prelude hiding (negate)
 import Data.List (inits, tails)
-import SAT.IPASIR.EnumVarSolver (Var(..), Lit(..), negate)
+import SAT.IPASIR (Var(..), Lit(..), negate)
 import MinDepthSN.SAT.Constraints (fixGateOrUnused)
 import MinDepthSN.SAT.CounterExample.Variables (CounterExample(..), valueLit)
 import MinDepthSN.Data.Size (channels, succeeding, afterLastLayer)

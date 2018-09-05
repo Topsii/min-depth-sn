@@ -4,7 +4,7 @@
 module MinDepthSN.SAT.Synthesis.ConstraintsBZ where
 
 import Prelude hiding (negate)
-import SAT.IPASIR.EnumVarSolver (Var(..), Lit, negate, polarize, lit)
+import SAT.IPASIR (Lit, negate, polarize, lit)
 import MinDepthSN.SAT.Synthesis.VarsBZ (NetworkSynthesis(Value_), StandardNetworkSynthesis, GeneralizedNetworkSynthesis)
 import Numeric.Natural (Natural)
 import Enumerate (enumerated)
@@ -123,7 +123,7 @@ update cexIdx = concat
     | GateOrUnused i j k <- enumerated :: [GateOrUnused o]
     ]
 
-sorts :: SortOrder o => Natural -> [Bool] -> [[Lit (NetworkSynthesis o)]]
+sorts :: forall o. SortOrder o => Natural -> [Bool] -> [[Lit (NetworkSynthesis o)]]
 sorts cexIdx counterexample = concat
     [ zipWith fixValue counterexample inputValues
     , update cexIdx
@@ -131,7 +131,7 @@ sorts cexIdx counterexample = concat
     ]
   where
     fixValue :: Bool -> Value -> [Lit (NetworkSynthesis o)]
-    fixValue polarity val = [polarize polarity . Var $ Value_ cexIdx val]
+    fixValue polarity val = [polarize polarity (cexIdx, val)]
 
 -- bad behavior on unused
 representativesOfBzIsomorphicEqClasses :: [[Lit GeneralizedNetworkSynthesis]]

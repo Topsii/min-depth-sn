@@ -5,7 +5,7 @@ module MinDepthSN.SAT.Constraints where
 
 import Prelude hiding (negate, maximum, minimum)
 import Data.List (inits, nub)
-import SAT.IPASIR.EnumVarSolver (Var(..), Lit(..), negate)
+import SAT.IPASIR (Var(..), Lit(..), negate)
 import MinDepthSN.Data.Size (Channel, BetweenLayers, before, after)
 import MinDepthSN.Data.Value (Value(..))
 import MinDepthSN.Data.GateOrUnused (GateOrUnused(..), SortOrder)

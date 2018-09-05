@@ -13,7 +13,6 @@ module SAT.IPASIR.Bindings
     ( Solver
     , runSolver
     , ipasirSignature
-    , ipasirInit
     , ipasirAdd
     , ipasirAssume
     , ipasirSolve
@@ -50,12 +49,14 @@ import Foreign.C.Types (CInt)
 newtype Solver s a = Solver { unSolver :: ReaderT (SolverPtr s) (ST s) a }
     deriving (Functor, Applicative, Monad)
 
--- | Same Semigroup instance as 'Control.Monad.ST'
+-- | Same semigroup instance as 'Control.Monad.ST.ST' or 'System.IO.IO'.
+-- Commonly combines @Solver s ()@ actions as there is semigroup instance for @()@.
 -- With GHC 8.6.1 this can be derived with the deriving via language extension.
 instance Semigroup a => Semigroup (Solver s a) where
     (<>) = liftA2 (<>)
 
--- | Same Monoid instance as 'Control.Monad.ST'
+-- | Same monoid instance as 'Control.Monad.ST.ST' or 'System.IO.IO'.
+-- Commonly combines @Solver s ()@ actions as there is monoid instance for @()@.
 -- With GHC 8.6.1 this can be derived with the deriving via language extension.
 instance Monoid a => Monoid (Solver s a) where
     mempty = pure mempty

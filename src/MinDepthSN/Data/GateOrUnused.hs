@@ -33,7 +33,7 @@ import Enumerate
     , cardinality
     , boundedCardinality
     )
-import SAT.IPASIR.EnumVarSolver (AsVar(..), Lit, lit)
+import SAT.IPASIR (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size (Channel, Layer)
 import MinDepthSN.Data.Gate 
     ( Gate

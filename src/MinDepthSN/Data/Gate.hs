@@ -35,7 +35,7 @@ import Enumerate
     , boundedCardinality
     )
 import Enumerate.Enum.Valid (Validatable, Valid(..), isValid)
-import SAT.IPASIR.EnumVarSolver (AsVar(..), Lit, lit)
+import SAT.IPASIR (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size (Channel, Layer)
 
 data SortingOrder = Standard | Generalized

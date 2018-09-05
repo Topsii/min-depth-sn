@@ -4,13 +4,14 @@
 module MinDepthSN.SAT.Synthesis.ConstraintsHaslop where
 
 import Prelude hiding (negate)
-import SAT.IPASIR.EnumVarSolver (Var(..), Lit(..), negate)
-import MinDepthSN.Data.GateOut
-import MinDepthSN.Data.Size
-import Enumerate (enumerated)
 import Data.List (inits)
 import Data.Ord (comparing)
 import Data.Monoid ((<>))
+import Enumerate (enumerated)
+import SAT.IPASIR (Var(..), Lit(..), negate, lit)
+import MinDepthSN.SAT.Synthesis.VarsHaslop
+import MinDepthSN.Data.GateOut
+import MinDepthSN.Data.Size
 
 canonicalGraph :: [[Lit GateOut]]
 canonicalGraph = 
@@ -33,13 +34,13 @@ minimalRepresentative' isCongruent isSmaller _ = [  ]
 -- Given an order on GateOut ignoring the gate index:
 -- For any two gate indices a and b after layer k, ensure that the assigned 
 -- GateOut of i is smaller than that of j.
-minimalRepresentative :: [[Lit GateOut]]
+minimalRepresentative :: [[Lit NetworkGraphSynthesis]]
 minimalRepresentative = 
     [
         -- instead (GateOut o p b h i k) and (GateOut r s a j l k) is a solution
         -- where we ensure a < b implies GateOut r s (a) j l k < GateOut o p (b) h i k
         -- the brackets indicate that a and b are irrelevant for ordering the GateOuts
-        [ Negative $ Var (GateOut o p a h i k), Negative $ Var (GateOut r s b j l k) ]
+        [ - lit (GateOut o p a h i k), - lit (GateOut r s b j l k) ]
     | a <- gatesInLayer
     , b <- succeeding a
     , k <- layers

@@ -12,7 +12,7 @@ import Data.Monoid ((<>))
 import GHC.Generics (Generic)
 import Enumerate (Enumerable)
 import Enumerate.Enum.Valid (Validatable, isValid)
-import SAT.IPASIR.EnumVarSolver (AsVar(..), Lit, lit)
+import SAT.IPASIR (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size
 
 -- | @Unused i k@ creates a variable \(unused_i^k\) indicating a
