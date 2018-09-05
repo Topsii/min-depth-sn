@@ -36,8 +36,6 @@ library:
   - enumerate
   - array
   - finite-typelits
-  - ghc-typelits-natnormalise
-  - ghc-typelits-knownnat
 
 executables:
   MinDepthSN-exe:
