@@ -2,13 +2,15 @@
 {-# language DeriveAnyClass #-}
 {-# language FlexibleContexts #-}
 
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE PatternSynonyms #-}
+
 module MinDepthSN.Data.Unused
     ( Unused(Unused)
     , unusedLit
     ) where
 
-import Data.Ord (comparing)
-import Data.Monoid ((<>))
+import Generic.Data
 import GHC.Generics (Generic)
 import Enumerate (Enumerable)
 import Enumerate.Enum.Valid (Validatable, isValid)
@@ -17,27 +19,30 @@ import MinDepthSN.Data.Size
 
 -- | @Unused i k@ creates a variable \(unused_i^k\) indicating a
 -- channel \(i\) is not used by any comparator gate in layer \(k\).
-data Unused = Unused { channel :: Channel, layer :: Layer }
-    deriving (Eq, Generic, Enumerable)
+data Unused = MkUnused { layer :: Layer, channel :: Channel }
+    deriving (Eq, Generic, Enumerable, Ord)
+
+{-# COMPLETE Unused #-}
+pattern Unused :: Channel -> Layer -> Unused
+pattern Unused i k = MkUnused k i
 
 instance Show Unused where
     show (Unused i k) = "Unused " ++ show i ++ " " ++ show k
 
-instance Ord Unused where
-    compare = comparing layer <> comparing channel
-
 instance Bounded Unused where
-    minBound = toEnum 0
-    maxBound = toEnum (n*d - 1)
+    minBound = gminBound
+    maxBound = gmaxBound
 
 instance Validatable Unused where
     isValid = const True
 
 instance Enum Unused where
-    toEnum int = Unused (toEnum i) (toEnum k)
-      where
-        (k,i) = int `quotRem` n
-    fromEnum (Unused i k) = fromEnum k * n + fromEnum i
+    toEnum = gtoFiniteEnum
+    fromEnum = gfromFiniteEnum
+    enumFrom = gfiniteEnumFrom
+    enumFromThen = gfiniteEnumFromThen
+    enumFromTo = gfiniteEnumFromTo
+    enumFromThenTo = gfiniteEnumFromThenTo
 
 -- | Literal of 'Unused' with positive polarity.
 unusedLit :: AsVar v Unused => Channel -> Layer -> Lit v

@@ -1,6 +1,7 @@
 
 {-# language DeriveGeneric #-}
 {-# language DeriveAnyClass #-}
+{-# language PatternSynonyms #-}
 
 module MinDepthSN.Data.Value
     ( Value(Value)
@@ -8,39 +9,43 @@ module MinDepthSN.Data.Value
     , outputValues
     ) where
 
-import Data.Ord (comparing)
-import Data.Monoid ((<>))
+import Generic.Data
 import GHC.Generics (Generic)
 import Enumerate (Enumerable)
 import Enumerate.Enum.Valid (Validatable, isValid)
-import MinDepthSN.Data.Size (Channel, BetweenLayers, n, d, channels, beforeFirstLayer, afterLastLayer)
+import MinDepthSN.Data.Size (Channel, BetweenLayers, n, d, channels, firstChannel, lastChannel, beforeFirstLayer, afterLastLayer)
 
 -- | @Value i k@ creates a variable \(v_i^k\) representing the value on
 -- channel \(i\) between layers \(k\) and \(k+1\).
-data Value = Value { channel :: Channel, betweenLayers :: BetweenLayers }
-    deriving (Eq, Generic, Enumerable)
+data Value = MkValue { betweenLayers :: BetweenLayers, channel :: Channel }
+    deriving (Eq, Generic, Enumerable, Ord)
+
+{-# COMPLETE Value #-}
+pattern Value :: Channel -> BetweenLayers -> Value
+pattern Value i k = MkValue k i
 
 instance Show Value where
     show (Value i k) = "Value " ++ show i ++ " " ++ show k
 
-instance Ord Value where
-    compare = comparing betweenLayers <> comparing channel
-
 instance Bounded Value where
-    minBound = toEnum 0
-    maxBound = toEnum (n*(d+1) - 1)
+    minBound = gminBound
+    maxBound = gmaxBound
 
 instance Validatable Value where
     isValid = const True
 
 instance Enum Value where
-    toEnum int = Value (toEnum i) (toEnum k)
-      where
-        (k,i) = int `quotRem` n
-    fromEnum (Value i k) = fromEnum k * n + fromEnum i
+    toEnum = gtoFiniteEnum
+    fromEnum = gfromFiniteEnum
+    enumFrom = gfiniteEnumFrom
+    enumFromThen = gfiniteEnumFromThen
+    enumFromTo = gfiniteEnumFromTo
+    enumFromThenTo = gfiniteEnumFromThenTo
 
 inputValues :: [Value]
-inputValues = [ Value i beforeFirstLayer | i <- channels ]
+inputValues =
+    [ Value firstChannel beforeFirstLayer .. Value lastChannel beforeFirstLayer ]
 
 outputValues :: [Value]
-outputValues = [ Value i afterLastLayer | i <- channels ]
+outputValues =
+    [ Value firstChannel afterLastLayer .. Value lastChannel afterLastLayer ]

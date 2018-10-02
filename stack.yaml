@@ -18,4 +18,4 @@ extra-deps:
 # - generic-data-0.2.0.0@sha256:f4ff9c19f003926eb68880670cf1b050f697dcd52c74a30eac90f34f6cf68172
 - base-orphans-0.8@sha256:4885caa82ab94fa5cb841d6d06a43a97cdc7e835f346be4f11c1cc5707b886db
 - git: https://github.com/Topsii/generic-data.git
-  commit: 245a8d078233f96e4cf60529e18d55262010826f
+  commit: 3bdb91e225f0124234dca683c210a0f44e2c65a3

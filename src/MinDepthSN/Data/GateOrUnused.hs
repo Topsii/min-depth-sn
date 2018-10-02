@@ -4,6 +4,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
 
+{-# LANGUAGE DeriveGeneric #-}
 
 {-# language FlexibleContexts #-}
 
@@ -33,6 +34,8 @@ import Enumerate
     , cardinality
     , boundedCardinality
     )
+import Generic.Data
+import GHC.Generics
 import SAT.IPASIR (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size (Channel, Layer)
 import MinDepthSN.Data.Gate 
@@ -73,7 +76,7 @@ type GeneralizedGateOrUnused = GateOrUnused 'Generalized
 data GateOrUnused (o :: SortingOrder) 
     = Gate_ (Gate o)
     | Unused_ Unused
-    deriving (Eq, Ord)
+    deriving (Eq, Ord, Generic)
 
 {-# COMPLETE  Gate,  Unused #-}
 {-# COMPLETE  Gate, Unused_ #-}
@@ -124,33 +127,18 @@ instance SortOrder o => Show (GateOrUnused o) where
         (Unused_ u) -> show u
 
 instance SortOrder o => Bounded (GateOrUnused o) where
-    minBound = min (Gate_ minBound) (Unused_ minBound)
-    maxBound = max (Gate_ maxBound) (Unused_ maxBound)
+    minBound = gminBound
+    maxBound = gmaxBound
 
 -- offset = sum . init . (0 :) . map cardinality $ [Proxy :: Proxy Unused, Proxy, Proxy]
 
 instance SortOrder o => Enum (GateOrUnused o) where
-    toEnum i
-        | i < 0 = error $ "toEnum (GateOrUnused): negative argument " ++ show i
-        | i <= fromEnum (Gate_   maxBound :: GateOrUnused o) 
-            = Gate_   $ toEnum (i -   gateOffset)
-        | i <= fromEnum (Unused_ maxBound :: GateOrUnused o)
-            = Unused_ $ toEnum (i - unusedOffset)
-        | otherwise = error $ "toEnum (GateOrUnused):"
-            ++ "argument " ++ show i ++ "exceeds maxBound"
-      where
-        gateOffset :: Int
-        gateOffset = 0
-        unusedOffset :: Int
-        unusedOffset = fromEnum (Gate_ maxBound :: GateOrUnused o) + 1
-    fromEnum gu = case gu of
-        Gate_   g ->   gateOffset + fromEnum g
-        Unused_ u -> unusedOffset + fromEnum u
-      where
-        gateOffset :: Int
-        gateOffset = 0
-        unusedOffset :: Int
-        unusedOffset = fromEnum (Gate_ maxBound :: GateOrUnused o) + 1
+    toEnum = gtoFiniteEnum
+    fromEnum = gfromFiniteEnum
+    enumFrom = gfiniteEnumFrom
+    enumFromThen = gfiniteEnumFromThen
+    enumFromTo = gfiniteEnumFromTo
+    enumFromThenTo = gfiniteEnumFromThenTo
 
 instance SortOrder o => Enumerable (GateOrUnused o) where
     enumerated = boundedEnumerated
