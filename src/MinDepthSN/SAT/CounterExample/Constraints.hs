@@ -29,7 +29,7 @@ import MinDepthSN.Data.GateOrUnused (GateOrUnused, SortOrder)
 sortedOutput :: [[Lit CounterExample]]
 sortedOutput =
     [
-        [ -valueLit i afterLastLayer, valueLit j afterLastLayer ]
+        [ - valueLit i afterLastLayer, valueLit j afterLastLayer ]
     | i <- channels
     , j <- succeeding i
     ]

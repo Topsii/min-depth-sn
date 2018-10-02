@@ -2,6 +2,7 @@
 {-# language TypeOperators #-}
 {-# language GeneralizedNewtypeDeriving #-}
 {-# language TypeFamilies #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module MinDepthSN.Data.Size 
     ( preceding
@@ -10,6 +11,8 @@ module MinDepthSN.Data.Size
     -- * Channel
     , Channel
     , n
+    , firstChannel
+    , lastChannel
     , channels
     -- * Layer
     , Layer
@@ -42,11 +45,20 @@ import Enumerate
     , boundedCardinality
     )
 
+import Data.Hashable
+import GHC.Generics (Generic)
+
 n :: Int
 n = length channels
 
 d:: Int
 d = length layers
+
+firstChannel :: Channel
+firstChannel = minBound
+
+lastChannel :: Channel
+lastChannel = maxBound
 
 channels :: [Channel]
 channels = enumerated
@@ -108,8 +120,8 @@ timesTwo = join add
 timesTwoPlusOne :: (KnownNat m, KnownNat n, (n+n) ~ (m+1)) => Finite n -> Finite (n + n)
 timesTwoPlusOne = shift . fromJust . strengthen . timesTwo
 
-type N = 6
-type D = 5
+type N = 10
+type D = 7
 
 gatesInLayer :: [GateInLayer]
 gatesInLayer = enumerated
@@ -123,6 +135,7 @@ newtype Channel = Channel (Finite N)
     , Num      -- ^ Modular arithmetic. Only the fromInteger function 
                -- is supposed to be useful.
     , Ord
+    , Generic
     , Real)
 
 newtype Layer = Layer (Finite D)
@@ -134,6 +147,7 @@ newtype Layer = Layer (Finite D)
     , Num      -- ^ Modular arithmetic. Only the fromInteger function 
                -- is supposed to be useful.
     , Ord
+    , Generic
     , Real)
 
 newtype GateInLayer = GateInLayer (Finite (N `Div` 2))
@@ -145,6 +159,7 @@ newtype GateInLayer = GateInLayer (Finite (N `Div` 2))
     , Num      -- ^ Modular arithmetic. Only the fromInteger function 
                 -- is supposed to be useful.
     , Ord
+    , Generic
     , Real)
 
 newtype UsedChannel = UsedChannel (Finite ((N `Div` 2) * 2))
@@ -156,6 +171,7 @@ newtype UsedChannel = UsedChannel (Finite ((N `Div` 2) * 2))
     , Num      -- ^ Modular arithmetic. Only the fromInteger function 
                 -- is supposed to be useful.
     , Ord
+    , Generic
     , Real)
 
 -- | Value at some chan, between some layers.
@@ -172,7 +188,15 @@ newtype BetweenLayers = BetweenLayers (Finite (D+1))
     , Num      -- ^ Modular arithmetic. Only the fromInteger function 
                -- is supposed to be useful.
     , Ord
+    , Generic
     , Real)
+
+instance Hashable (Finite n)
+instance Hashable Channel where
+instance Hashable Layer where
+instance Hashable BetweenLayers where
+instance Hashable GateInLayer where
+
 
 instance (Show Channel) where
     show (Channel i) = show $ toInteger i

@@ -7,16 +7,40 @@ import SAT.IPASIR
 import MinDepthSN.SAT.Synthesis.ConstraintsBZ
 import MinDepthSN.SAT.Synthesis.VarsBZ
 import MinDepthSN.SAT.CounterExample.Constraints
+-- import MinDepthSN.SAT.CounterExample.Variables
+import MinDepthSN.SAT.Synthesis.ConstraintsHaslop
 import MinDepthSN.Data.GateOrUnused
 import MinDepthSN.Data.Size
 import MinDepthSN.Data.Value
 import Numeric.Natural
-import Debug.Trace
+-- import Data.EitherR
+-- import Control.Applicative
+-- import Data.Functor.Identity
+
+-- -- newtype CEGIS cex syn = MkCegis (Solver s syn (Either cex syn))
+
+-- newtype Cegis  s1 o f cex syn = Cegis  (ExceptRT (f syn) (Solver s1 o) cex) -- Monoid (f syn), Alternative f
+-- newtype Cegis' s2 o g cex syn = Cegis' (ExceptRT (g cex) (Solver s2 o) syn)  -- Monoid (g cex), Alternative g
+-- newtype CegisMinDepthSN  s o = CegisMinDepthSN  (ExceptRT (Maybe [GateOrUnused o]) (NetworkSolver s o)  [Bool])
+-- newtype CegisMinDepthSN' s o = CegisMinDepthSN' (ExceptRT [[Bool]]                 (CexInputSolver s o) [GateOrUnused o])
+-- type NetworkSolver s o = Solver s (NetworkSynthesis o)
+-- type CexInputSolver s = Solver s CounterExample
+
+-- cegis' :: Monad m => (cex -> cexsAccum -> m (cexsAccum, Maybe syn)) -> (syn -> Maybe cex) -> cexsAccum -> m (Either cexsAccum syn)
+-- unfoldrM' (monad-loops)
+
+-- cegis :: Alternative f => (a -> Either a b) -> (b -> Either b a) -> f (Either a b)
+-- cegis synthesize findCex =
+--     runIdentity $ cegisM (Identity . synthesize) (Identity . findCex)
+
+-- cegisM :: (Monad m, Alternative f) => (a -> m (Either a b)) -> (b -> m (Either b a)) -> m a -> m (f (Either a b))
+-- cegisM synthesize findCex init = init >> synthesize
 
 main :: IO ()
+-- main = print $ runSolver (addClauses minimalRepresentative >> solve)
 main = print networkSolution
 
-networkSolution :: Either [Bool] [GeneralizedGateOrUnused]
+networkSolution :: Either [Bool] [StandardGateOrUnused]
 networkSolution = runSolver $ do
     --addCNF representativesOfBzIsomorphicEqClasses
     let initCexCnt = 0
@@ -27,11 +51,19 @@ networkSolution = runSolver $ do
         Nothing -> error $ "no initial cex: " ++ show network
         Just cex -> findSortingNetwork (fromInteger initCexCnt+1) cex
 
+-- findFirstNetwork :: SortOrder o => Integer -> ExceptRT (Maybe [GateOrUnused o]) (Solver s (NetworkSynthesis o)) [Bool]
+-- findFirstNetwork initCexCnt = do
+--     network <- findNetwork initCexCnt
+--     let maybeCex = findCounterExample network
+--     case maybeCex of
+--         Nothing -> error $ "no initial cex: " ++ show network
+--         Just cex -> findSortingNetwork (fromInteger initCexCnt+1) cex
+
 findNetwork :: SortOrder o => Integer -> Solver s (NetworkSynthesis o) [GateOrUnused o]
 findNetwork initCexCnt = do
     let initCexs = genericTake initCexCnt . prioritizeSmallWindows $ inputs
     let (_, sortsCexs) = mapAccumL (\cIdx cx -> (cIdx+1, sorts cIdx cx)) 0 initCexs
-    r <- solveCNFs $ usage : sortsCexs
+    r <- solveCNFs $ [usage, maximalFirstLayer] ++ sortsCexs
     if r
         then trueAssigned enumerated
         else error "no network was found initially"
@@ -70,7 +102,7 @@ findSortingNetwork cexIdx cex = do
         let positions = (map fromDIMACS $ range minCounterExample maxCounterExample) :: [Var CounterExample]
         let positionValues = zip vals positions-}
         case findCounterExample {-  trace (show network ++ "\n" ++ show positionValues ++ "\n")-} network of
-            Just cex2 -> trace (show cexIdx ++ ": " ++ show cex2) $ findSortingNetwork (cexIdx + 1) cex2
+            Just cex2 -> {-trace (show cexIdx ++ ": " ++ show cex2) $-} findSortingNetwork (cexIdx + 1) cex2
             Nothing -> return $ Right network
     else return $ Left cex
 

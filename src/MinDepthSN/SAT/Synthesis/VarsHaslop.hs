@@ -12,14 +12,19 @@ data NetworkGraphSynthesis
     = GateIn_ GateIn
     | GateOut_ GateOut
 
+instance Show NetworkGraphSynthesis where
+    show var = case var of
+        GateIn_ gi -> show gi
+        GateOut_ go -> show go
+
 instance AsVar NetworkGraphSynthesis GateIn where
-    v = GateIn_
+    asVar = GateIn_
 
 instance AsVar NetworkGraphSynthesis GateOut where
-    v = GateOut_
+    asVar = GateOut_
 
 instance AsVar NetworkGraphSynthesis NetworkGraphSynthesis where
-    v = id
+    asVar = id
 
 gateInOffset :: Int
 gateInOffset = 0

@@ -16,6 +16,8 @@ import qualified Data.Map.Strict as Map
 import Data.Array (Array)
 import qualified Data.Array as Array -- IntMap instead?
 
+import Data.Hashable
+
 import Enumerate (Enumerable, enumerated, cardinality, boundedCardinality)
 import Enumerate.Enum (toEnum_enumerable, fromEnum_enumerable)
 
@@ -35,6 +37,7 @@ deriving instance Eq a => Eq (Valid a)
 deriving instance Ord a => Ord (Valid a)
 deriving instance Show a => Show (Valid a)
 deriving instance Validatable a => Validatable (Valid a)
+deriving instance Hashable a => Hashable (Valid a)
 
 instance (Enumerable a, Validatable a, Ord a) => Enumerable (Valid a) where
     enumerated = validEnumerated

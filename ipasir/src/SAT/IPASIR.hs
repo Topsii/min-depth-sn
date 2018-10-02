@@ -2,6 +2,7 @@
 {-# language GeneralizedNewtypeDeriving #-}
 {-# language StandaloneDeriving #-}
 {-# language DeriveFunctor #-}
+{-# language TypeFamilies #-}
 
 {-# language MultiParamTypeClasses #-}
 {-# language ScopedTypeVariables #-}
@@ -41,20 +42,23 @@ import Foreign.C.Types (CInt)
 
 import SAT.IPASIR.Bindings hiding (Solver, runSolver)
 import qualified SAT.IPASIR.Bindings as IPASIR
+import Control.Monad.Primitive
 
 -- newtype Solver
 -- ensure correct state: input/sat/unsat
--- ensure enum type is always the same: Var a <-> Lit a <-> Solver s a ()
 -- track max var index, ensure valid requests for ipasirVal/ipasirConflict
 
 newtype Solver s v a = Solver { unSolver :: IPASIR.Solver s a }
     deriving (Functor, Applicative, Monad, Semigroup, Monoid)
 
+instance PrimMonad (Solver s v) where
+    type PrimState (Solver s v) = s
+    primitive = Solver . primitive
 
 runSolver :: Enum v => (forall s. Solver s v a) -> a
 runSolver solver = IPASIR.runSolver (unSolver solver)
 
--- add a 2-literal clause containing both polarities of max var.
+-- add a 2-literal clause containing both +v and -v where v is the largest var.
 -- this will force the solver to allocate all variables?, even if they are not added later.
 -- It will also not change the result.
 -- runSolver :: (Enum v, Bounded v) => (forall s. Solver s v a) -> a
@@ -80,14 +84,20 @@ negate literal = case literal of
     Negative variable -> Positive variable
 
 class Enum v => AsVar v a where
-    v :: a -> v
+    asVar :: a -> v
 
 lit :: AsVar v a => a -> Lit v
 lit = Positive . var
 
 var :: AsVar v a => a -> Var v
-var = Var . v
+var = Var . asVar
 
+-- perhaps a bad name, since another use of the term polarity is:
+-- The polarity determines wether a variable is first 
+-- assigned true (positive polarity) or false (negative polarity)
+-- wouldn't it be ideal to rename this to lit and have unary prefix operators:
+-- (-) :: a -> Lit v
+-- (+) :: a -> Lit v
 polarize :: AsVar v a => Bool -> a -> Lit v
 polarize polarity variable = case polarity of
     True  -> Positive $ var variable

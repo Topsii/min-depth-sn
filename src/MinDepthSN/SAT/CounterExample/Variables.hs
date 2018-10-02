@@ -26,7 +26,10 @@ instance Enumerable CounterExample where
     cardinality = boundedCardinality
 
 instance AsVar CounterExample Value where
-    v = CounterExample
+    asVar = CounterExample
+
+instance AsVar CounterExample CounterExample where
+    asVar = id
 
 valueLit :: Channel -> BetweenLayers -> Lit CounterExample
 valueLit i k = Positive (ValueVar i k)

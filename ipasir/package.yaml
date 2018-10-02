@@ -1,8 +1,8 @@
 name: ipasir
-version: '0.1.0.0'
-author: Author name here
-maintainer: example@example.com
-copyright: 2017 Author name here
+version: 0.1.0.0
+author: "Tobias Haslop"
+maintainer: "haslop@uni-bremen.de"
+copyright: "2017 Philipp Dargel, 2018 Tobias Haslop"
 license: MIT
 ghc-options:
 - -static
@@ -17,6 +17,7 @@ build-tools:
 dependencies:
 - base >= 4.7 && < 5
 - transformers
+- primitive
 # - indexed-extras
 library:
   source-dirs: src
@@ -24,5 +25,9 @@ library:
   - ipasircryptominisat5
   extra-lib-dirs:
   - C:/PROGRA~1/cryptominisat5/lib
-  include-dirs:
-  - C:/PROGRA~1/cryptominisat5/include
+
+  # extra-libraries: 
+  # - jamsats
+  # - stdc++ # for static solver libs this line is most likely needed too
+  # extra-lib-dirs:
+  # - C:/Users/Tobias/Documents/Uni/ba/JamSAT-install/lib

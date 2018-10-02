@@ -24,6 +24,10 @@ dependencies:
 ghc-options:
 - -Wall
 - -Werror
+- -fno-warn-orphans
+- -fno-warn-incomplete-patterns
+- -fno-warn-unused-top-binds
+- -fno-warn-unused-imports
 - -O2
 
 library:
@@ -31,11 +35,17 @@ library:
   dependencies:
   - ipasir
   - containers
-  - transformers
   - split
   - enumerate
   - array
   - finite-typelits
+#  - errors
+  - unordered-containers
+  - hashable
+  - ghc-typelits-natnormalise
+  - ghc-typelits-knownnat
+  - generic-data
+
 
 executables:
   MinDepthSN-exe:

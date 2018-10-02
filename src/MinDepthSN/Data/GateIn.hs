@@ -4,14 +4,16 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# language FlexibleContexts #-}
 
 module MinDepthSN.Data.GateIn
     ( GateIn(GateIn)
+    , gateInLit
+    , UnvalidatedGateIn(UnvalidatedGateIn)
     ) where
 
 import Data.Ord (comparing)
 import Data.Monoid ((<>))
-import MinDepthSN.Data.Size
 import GHC.Generics (Generic)
 import Enumerate
     ( Enumerable
@@ -20,7 +22,9 @@ import Enumerate
     , cardinality
     , boundedCardinality
     )
-import Enumerate.Enum.Valid (Validatable, Valid(..), isValid)
+import Enumerate.Enum.Valid (Validatable(..), Valid(..))
+import SAT.IPASIR (AsVar(..), Lit, lit)
+import MinDepthSN.Data.Size
 
 data UnvalidatedGateIn = UnvalidatedGateIn {
     inboundChannel1 :: Channel,
@@ -47,11 +51,15 @@ instance Validatable UnvalidatedGateIn where
         && (even n || inboundChannel2 /= maxBound || inboundLayer2 == minBound)
 
 newtype GateIn = ValidGateIn (Valid UnvalidatedGateIn)
-    deriving newtype (Eq, Ord, Validatable, Bounded, Enum)
+    deriving newtype (Eq, Ord, Validatable, Bounded, Enum, Show)
 
 pattern GateIn :: Channel -> Channel -> GateInLayer -> Layer -> Layer -> Layer -> GateIn
-pattern GateIn a b c d e f = ValidGateIn (Valid (UnvalidatedGateIn a b c d e f))
+pattern GateIn a b c x y z = ValidGateIn (Valid (UnvalidatedGateIn a b c x y z))
 
 instance Enumerable GateIn where
     enumerated = boundedEnumerated
     cardinality = boundedCardinality
+
+-- | Literal of 'GateIn' with positive polarity.
+gateInLit :: AsVar v GateIn => Channel -> Channel -> GateInLayer -> Layer -> Layer -> Layer -> Lit v
+gateInLit a b c x y z = lit (GateIn a b c x y z)

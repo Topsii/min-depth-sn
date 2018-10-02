@@ -2,11 +2,13 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
 
+{-# LANGUAGE TypeFamilies #-}
+
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE GADTs #-}
 
-{#context lib="ipasircryptominisat5" #}
+{#context lib="libjamsats" #}
 #include "ipasir.h"
 
 module SAT.IPASIR.Bindings
@@ -23,6 +25,7 @@ module SAT.IPASIR.Bindings
 import Control.Monad.ST.Unsafe (unsafeIOToST)
 import Control.Monad.ST (ST, runST)
 import Control.Monad.Trans.Reader (ReaderT(..), runReaderT)
+import Control.Monad.Primitive
 
 import Data.Word (Word8)
 import Control.Applicative (liftA2)
@@ -48,6 +51,10 @@ import Foreign.C.Types (CInt)
 
 newtype Solver s a = Solver { unSolver :: ReaderT (SolverPtr s) (ST s) a }
     deriving (Functor, Applicative, Monad)
+
+instance PrimMonad (Solver s) where
+    type PrimState (Solver s) = s
+    primitive = Solver . primitive
 
 -- | Same semigroup instance as 'Control.Monad.ST.ST' or 'System.IO.IO'.
 -- Commonly combines @Solver s ()@ actions as there is semigroup instance for @()@.

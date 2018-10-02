@@ -139,10 +139,10 @@ representativesOfBzIsomorphicEqClasses = concat
     [ 
         let predK = pred k 
         in 
-            [ [ -gateLit i j k, -gateLit h i predK, -gateLit j l predK ]
-            , [ -gateLit i j k, -gateLit h i predK, -gateLit l j predK ]
-            , [ -gateLit i j k, -gateLit i h predK, -gateLit j l predK ]
-            , [ -gateLit i j k, -gateLit i h predK, -gateLit l j predK ]
+            [ [ - gateLit i j k, - gateLit h i predK, - gateLit j l predK ]
+            , [ - gateLit i j k, - gateLit h i predK, - gateLit l j predK ]
+            , [ - gateLit i j k, - gateLit i h predK, - gateLit j l predK ]
+            , [ - gateLit i j k, - gateLit i h predK, - gateLit l j predK ]
             ]
     | h <- channels
     , i <- channels

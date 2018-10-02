@@ -40,19 +40,19 @@ instance SortOrder o => Show (NetworkSynthesis o) where
         Value_ cexIdx val -> show cexIdx ++ " " ++ show val
 
 instance SortOrder o => AsVar (NetworkSynthesis o) Unused where
-    v = GateOrUnused_ . Unused_
+    asVar = GateOrUnused_ . Unused_
 
 instance SortOrder o => AsVar (NetworkSynthesis o) (Gate o) where
-    v = GateOrUnused_ . Gate_
+    asVar = GateOrUnused_ . Gate_
 
 instance SortOrder o => AsVar (NetworkSynthesis o) (GateOrUnused o) where
-    v = GateOrUnused_
+    asVar = GateOrUnused_
 
 instance SortOrder o => AsVar (NetworkSynthesis o) (Natural, Value) where
-    v = uncurry Value_
+    asVar = uncurry Value_
 
 instance SortOrder o => AsVar (NetworkSynthesis o) (NetworkSynthesis o) where
-    v = id
+    asVar = id
             
 -- | NetworkSynthesis values are enumerated as follows starting from 0:
 -- where
