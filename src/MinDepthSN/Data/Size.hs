@@ -3,6 +3,7 @@
 {-# language GeneralizedNewtypeDeriving #-}
 {-# language TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module MinDepthSN.Data.Size 
     ( preceding
@@ -64,23 +65,16 @@ channels :: [Channel]
 channels = enumerated
 
 -- | > preceding x == [ minBound .. pred x ]
-preceding :: (Eq a, Bounded a, Enum a) => a -> [a]
-preceding x
-    | x == minBound = []
-    | otherwise = [ minBound .. pred x ]
+preceding :: forall a. (Bounded a, Enum a) => a -> [a]
+preceding x = map toEnum [ fromEnum (minBound :: a) .. fromEnum x - 1 ]
 
 -- | > succeeding a == [ succ x .. maxBound ]
-succeeding :: (Eq a, Bounded a, Enum a) => a -> [a]
-succeeding x
-    | x == maxBound = []
-    | otherwise = [ succ x .. maxBound ]
+succeeding :: forall a. (Bounded a, Enum a) => a -> [a]
+succeeding x = map toEnum [ fromEnum x + 1 .. fromEnum (maxBound :: a) ]
 
 -- | > between from to == [ succ from .. pred to ]
-between :: (Eq a, Bounded a, Enum a) => a -> a -> [a]
-between from to
-    | from == maxBound = []
-    | to == minBound = []
-    | otherwise = [ succ from .. pred to ]
+between :: (Bounded a, Enum a) => a -> a -> [a]
+between from to = map toEnum [ fromEnum from + 1 .. fromEnum to - 1 ]
 
 layers :: [Layer]
 layers = enumerated
