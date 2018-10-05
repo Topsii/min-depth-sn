@@ -49,7 +49,7 @@ networkSolution = runSolver $ do
     let maybeCex = findCounterExample network
     case maybeCex of
         Nothing -> error $ "no initial cex: " ++ show network
-        Just cex -> findSortingNetwork (fromInteger initCexCnt+1) cex
+        Just cex -> findSortingNetwork (fromInteger initCexCnt) cex
 
 -- findFirstNetwork :: SortOrder o => Integer -> ExceptRT (Maybe [GateOrUnused o]) (Solver s (NetworkSynthesis o)) [Bool]
 -- findFirstNetwork initCexCnt = do
