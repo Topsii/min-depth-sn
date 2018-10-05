@@ -6,6 +6,7 @@
 
 {-# language MultiParamTypeClasses #-}
 {-# language ScopedTypeVariables #-}
+{-# language LambdaCase #-}
 
 module SAT.IPASIR
     ( Solver
@@ -79,7 +80,7 @@ deriving instance Eq a => Eq (Lit a)
 deriving instance Ord a => Ord (Lit a)
 
 negate :: Lit v -> Lit v
-negate literal = case literal of
+negate = \case
     Positive variable -> Negative variable
     Negative variable -> Positive variable
 
@@ -99,9 +100,9 @@ var = Var . asVar
 -- (-) :: a -> Lit v
 -- (+) :: a -> Lit v
 polarize :: AsVar v a => Bool -> a -> Lit v
-polarize polarity variable = case polarity of
-    True  -> Positive $ var variable
-    False -> Negative $ var variable
+polarize = \case
+    True  -> Positive . var
+    False -> Negative . var
 
 -- | @fromDIMACS 0@ is undefined, otherwise it holds:
 --
@@ -125,7 +126,7 @@ instance Show a => Show (Var a) where
     show (Var x) = 'v' : show x
 
 instance Show a => Show (Lit a) where
-    show literal = case literal of
+    show = \case
         Positive variable -> '+' : show variable
         Negative variable -> '-' : show variable
 
@@ -134,7 +135,7 @@ instance Enum a => Dimacs (Var a) where
     fromDIMACS integer = toEnum (fromIntegral integer - 1)
 
 instance Enum a => Dimacs (Lit a) where
-    toDIMACS literal = case literal of
+    toDIMACS = \case
         Positive variable ->   toDIMACS variable
         Negative variable -> - toDIMACS variable
     fromDIMACS integer
