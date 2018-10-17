@@ -2,7 +2,6 @@
 {-# language DeriveAnyClass #-}
 {-# language FlexibleContexts #-}
 
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PatternSynonyms #-}
 
 module MinDepthSN.Data.Unused

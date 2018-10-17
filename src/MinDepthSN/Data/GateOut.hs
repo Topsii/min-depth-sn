@@ -15,7 +15,12 @@ module MinDepthSN.Data.GateOut
 import Data.Ord (comparing)
 import Data.Monoid ((<>))
 import SAT.IPASIR (AsVar(..), Lit, lit)
-import MinDepthSN.Data.Size (GateInLayer, Layer, n, d)
+import MinDepthSN.Data.Size 
+    ( GateInLayer
+    , Layer
+    -- , n
+    -- , d
+    )
 import GHC.Generics (Generic)
 import Enumerate
     ( Enumerable
@@ -113,8 +118,8 @@ __bug__ name = error (name ++ ": invalid Enumerable instance")
 --     fromEnum _ = 0
 --     -- [n2, n2, n2, d, d, d][a,b,c,d,e,f]
 
-n2 :: Int
-n2 = n `div` 2
+-- n2 :: Int
+-- n2 = n `div` 2
 
 instance Enum GateOut where
     toEnum   = toEnum_enumerable   arrayEnumerable

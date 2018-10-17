@@ -1,3 +1,6 @@
+
+{-# LANGUAGE FlexibleContexts #-}
+
 module MinDepthSN.CEGIS where
 
 import Data.List
@@ -8,8 +11,9 @@ import MinDepthSN.SAT.Synthesis.ConstraintsBZ
 import MinDepthSN.SAT.Synthesis.VarsBZ
 import MinDepthSN.SAT.CounterExample.Constraints
 -- import MinDepthSN.SAT.CounterExample.Variables
-import MinDepthSN.SAT.Synthesis.ConstraintsHaslop
+-- import MinDepthSN.SAT.Synthesis.ConstraintsHaslop
 import MinDepthSN.Data.GateOrUnused
+import MinDepthSN.Data.Gate (Two)
 import MinDepthSN.Data.Size
 import MinDepthSN.Data.Value
 import Numeric.Natural
@@ -59,7 +63,7 @@ networkSolution = runSolver $ do
 --         Nothing -> error $ "no initial cex: " ++ show network
 --         Just cex -> findSortingNetwork (fromInteger initCexCnt+1) cex
 
-findNetwork :: SortOrder o => Integer -> Solver s (NetworkSynthesis o) [GateOrUnused o]
+findNetwork :: Two f Channel => Integer -> Solver s (NetworkSynthesis f) [GateOrUnused f]
 findNetwork initCexCnt = do
     let initCexs = genericTake initCexCnt . prioritizeSmallWindows $ inputs
     let (_, sortsCexs) = mapAccumL (\cIdx cx -> (cIdx+1, sorts cIdx cx)) 0 initCexs
@@ -93,7 +97,7 @@ trailingOnes = length . takeWhile id . reverse
 --ExceptT Alternative/MonadPlus instance to collect cex for cegis?
 
 -- find a network, that sorts the given input and then look if there is still a counterexample input that is not sorted
-findSortingNetwork :: SortOrder o => Natural -> [Bool] -> Solver s (NetworkSynthesis o) (Either [Bool] [GateOrUnused o])
+findSortingNetwork :: Two f Channel => Natural -> [Bool] -> Solver s (NetworkSynthesis f) (Either [Bool] [GateOrUnused f])
 findSortingNetwork cexIdx cex = do
     r <- solveCNFs [ sorts cexIdx cex ]
     if r then do
@@ -106,7 +110,7 @@ findSortingNetwork cexIdx cex = do
             Nothing -> return $ Right network
     else return $ Left cex
 
-findCounterExample :: SortOrder o => [GateOrUnused o] -> Maybe [Bool]
+findCounterExample :: Two f Channel => [GateOrUnused f] -> Maybe [Bool]
 findCounterExample network = runSolver $ do
     s <- solveCNFs [fixNetwork network, unsortedOutput]
     if s then do

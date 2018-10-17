@@ -3,11 +3,11 @@
 module MinDepthSN.SAT.Synthesis.ConstraintsHaslop where
 
 import Prelude hiding (negate)
+import Data.Enum (preceding, succeeding)
 import Enumerate.Enum.Valid (Validatable(..))
 import Enumerate (enumerated)
 import SAT.IPASIR (Lit(..), negate, Var(..))
 import MinDepthSN.SAT.Synthesis.VarsHaslop
-import MinDepthSN.SAT.Constraints
 import MinDepthSN.Data.GateOut
 import MinDepthSN.Data.GateIn
 import MinDepthSN.Data.Size

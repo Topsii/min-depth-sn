@@ -1,6 +1,8 @@
 {-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# LANGUAGE FlexibleContexts #-}
+
 module MinDepthSN.SAT.Constraints where
 
 import Prelude hiding (negate, maximum, minimum)
@@ -9,6 +11,7 @@ import SAT.IPASIR (Var(..), Lit(..), negate)
 import MinDepthSN.Data.Size (Channel, BetweenLayers, before, after)
 import MinDepthSN.Data.Value (Value(..))
 import MinDepthSN.Data.GateOrUnused (GateOrUnused(..), SortOrder)
+import MinDepthSN.Data.Gate (Two)
 
 
 -- | @fixGateOrUnused (GateOrUnused i j k)@ either compares the values on the 
@@ -25,7 +28,7 @@ import MinDepthSN.Data.GateOrUnused (GateOrUnused(..), SortOrder)
 --
 -- See 'minimum' and 'maximum' for the CNF.
 --
-fixGateOrUnused :: SortOrder o => GateOrUnused o -> [[Lit Value]]
+fixGateOrUnused :: Two f Channel => GateOrUnused f -> [[Lit Value]]
 fixGateOrUnused (GateOrUnused i j k) =
     minimum in1 in2 outMin ++ maximum in1 in2 outMax
   where

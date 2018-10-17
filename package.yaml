@@ -29,6 +29,7 @@ ghc-options:
 - -fno-warn-unused-top-binds
 - -fno-warn-unused-imports
 - -O2
+# - -fignore-asserts
 
 library:
   source-dirs: src
@@ -60,3 +61,7 @@ tests:
     source-dirs:         test
     dependencies:
     - MinDepthSN
+    - tasty
+    - tasty-hunit
+    - HUnit
+    - finite-typelits

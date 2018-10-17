@@ -26,32 +26,38 @@ import MinDepthSN.Data.Gate (Gate)
 
 import qualified MinDepthSN.Data.Size as Size
 
-type StandardNetworkSynthesis = NetworkSynthesis 'Standard
-type GeneralizedNetworkSynthesis = NetworkSynthesis 'Generalized
+import MinDepthSN.Data.Combinatorics2.CombinationNoRepetition
+import MinDepthSN.Data.Combinatorics2.VariationNoRepetition
 
-data NetworkSynthesis (o :: SortingOrder) 
-    = GateOrUnused_ { unGateOrUnused_ :: GateOrUnused o }
+-- type StandardNetworkSynthesis = NetworkSynthesis 'Standard
+-- type GeneralizedNetworkSynthesis = NetworkSynthesis 'Generalized
+
+type StandardNetworkSynthesis = NetworkSynthesis CombinationNoRepetition
+type GeneralizedNetworkSynthesis = NetworkSynthesis VariationNoRepetition
+
+data NetworkSynthesis f
+    = GateOrUnused_ { unGateOrUnused_ :: GateOrUnused f }
     | Value_ { counterExIdx :: Natural, unValue_ :: Value }
     deriving (Eq, Ord)
 
-instance SortOrder o => Show (NetworkSynthesis o) where
+instance Show (NetworkSynthesis f) where
     show var = case var of
         GateOrUnused_ gu -> show gu
         Value_ cexIdx val -> show cexIdx ++ " " ++ show val
 
-instance SortOrder o => AsVar (NetworkSynthesis o) Unused where
+instance AsVar (NetworkSynthesis f) Unused where
     asVar = GateOrUnused_ . Unused_
 
-instance SortOrder o => AsVar (NetworkSynthesis o) (Gate o) where
+instance AsVar (NetworkSynthesis f) (Gate f) where
     asVar = GateOrUnused_ . Gate_
 
-instance SortOrder o => AsVar (NetworkSynthesis o) (GateOrUnused o) where
+instance AsVar (NetworkSynthesis f) (GateOrUnused f) where
     asVar = GateOrUnused_
 
-instance SortOrder o => AsVar (NetworkSynthesis o) (Natural, Value) where
+instance AsVar (NetworkSynthesis f) (Natural, Value) where
     asVar = uncurry Value_
 
-instance SortOrder o => AsVar (NetworkSynthesis o) (NetworkSynthesis o) where
+instance AsVar (NetworkSynthesis f) (NetworkSynthesis f) where
     asVar = id
             
 -- | NetworkSynthesis values are enumerated as follows starting from 0:
@@ -70,7 +76,7 @@ instance SortOrder o => AsVar (NetworkSynthesis o) (NetworkSynthesis o) where
 --    ... <-> ...
 --    ... <-> Value_ 1 maxBound
 --    ... <-> ...
-instance SortOrder o => Enum (NetworkSynthesis o) where
+instance Enum (NetworkSynthesis f) where
 
     toEnum i
         | i < 0 = error $ "toEnum (NetworkSynthesis): negative argument " ++ show i

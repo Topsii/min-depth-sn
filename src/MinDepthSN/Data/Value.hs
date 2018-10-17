@@ -13,7 +13,7 @@ import Generic.Data
 import GHC.Generics (Generic)
 import Enumerate (Enumerable)
 import Enumerate.Enum.Valid (Validatable, isValid)
-import MinDepthSN.Data.Size (Channel, BetweenLayers, n, d, channels, firstChannel, lastChannel, beforeFirstLayer, afterLastLayer)
+import MinDepthSN.Data.Size (Channel, BetweenLayers, firstChannel, secondChannel, lastChannel, beforeFirstLayer, afterLastLayer)
 
 -- | @Value i k@ creates a variable \(v_i^k\) representing the value on
 -- channel \(i\) between layers \(k\) and \(k+1\).
@@ -44,8 +44,16 @@ instance Enum Value where
 
 inputValues :: [Value]
 inputValues =
-    [ Value firstChannel beforeFirstLayer .. Value lastChannel beforeFirstLayer ]
+    [ Value  firstChannel beforeFirstLayer
+    , Value secondChannel beforeFirstLayer
+      .. 
+      Value   lastChannel beforeFirstLayer
+    ]
 
 outputValues :: [Value]
 outputValues =
-    [ Value firstChannel afterLastLayer .. Value lastChannel afterLastLayer ]
+    [ Value  firstChannel afterLastLayer
+    , Value secondChannel afterLastLayer
+      .. 
+      Value   lastChannel afterLastLayer
+    ]

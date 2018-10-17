@@ -6,13 +6,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module MinDepthSN.Data.Size 
-    ( preceding
-    , succeeding
-    , between
+    ( 
     -- * Channel
-    , Channel
+      Channel
     , n
     , firstChannel
+    , secondChannel
     , lastChannel
     , channels
     -- * Layer
@@ -58,23 +57,14 @@ d = length layers
 firstChannel :: Channel
 firstChannel = minBound
 
+secondChannel :: Channel
+secondChannel = succ firstChannel
+
 lastChannel :: Channel
 lastChannel = maxBound
 
 channels :: [Channel]
 channels = enumerated
-
--- | > preceding x == [ minBound .. pred x ]
-preceding :: forall a. (Bounded a, Enum a) => a -> [a]
-preceding x = map toEnum [ fromEnum (minBound :: a) .. fromEnum x - 1 ]
-
--- | > succeeding a == [ succ x .. maxBound ]
-succeeding :: forall a. (Bounded a, Enum a) => a -> [a]
-succeeding x = map toEnum [ fromEnum x + 1 .. fromEnum (maxBound :: a) ]
-
--- | > between from to == [ succ from .. pred to ]
-between :: (Bounded a, Enum a) => a -> a -> [a]
-between from to = map toEnum [ fromEnum from + 1 .. fromEnum to - 1 ]
 
 layers :: [Layer]
 layers = enumerated
@@ -114,8 +104,8 @@ timesTwo = join add
 timesTwoPlusOne :: (KnownNat m, KnownNat n, (n+n) ~ (m+1)) => Finite n -> Finite (n + n)
 timesTwoPlusOne = shift . fromJust . strengthen . timesTwo
 
-type N = 10
-type D = 7
+type N = 8
+type D = 8
 
 gatesInLayer :: [GateInLayer]
 gatesInLayer = enumerated
