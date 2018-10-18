@@ -12,12 +12,12 @@ data VariationNoRepetition a = MkVariationNoRepetition a a
     deriving (Eq, Ord, Show)
 
 {-# COMPLETE VariationNoRepetition #-}
-pattern VariationNoRepetition :: (Eq a, Show a) => a -> a -> VariationNoRepetition a
+pattern VariationNoRepetition :: Eq a => a -> a -> VariationNoRepetition a
 pattern VariationNoRepetition a a' <- MkVariationNoRepetition a a'
   where
     VariationNoRepetition a a' = assert (a /= a') $ MkVariationNoRepetition a a'
 
-instance (Bounded a, Enum a, Eq a, Show a) => Enum (VariationNoRepetition a) where
+instance (Bounded a, Enum a, Eq a) => Enum (VariationNoRepetition a) where
     fromEnum (VariationNoRepetition x1 x2) =
         i_x1 * enumMax + i_x2 - fromEnum (i_x1 <= i_x2)
       where
@@ -35,7 +35,7 @@ instance (Bounded a, Enum a, Eq a, Show a) => Enum (VariationNoRepetition a) whe
     enumFrom = boundedEnumFrom
     enumFromThen = boundedEnumFromThen
 
-instance (Bounded a, Enum a, Eq a, Show a) => Bounded (VariationNoRepetition a) where
+instance (Bounded a, Enum a, Eq a) => Bounded (VariationNoRepetition a) where
     minBound = toEnum 0
     maxBound = toEnum $ (enumMax + 1) * enumMax - 1
       where
