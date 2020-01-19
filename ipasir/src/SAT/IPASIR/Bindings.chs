@@ -30,13 +30,13 @@ import Control.Monad.Primitive
 
 import Data.Word (Word8)
 import Control.Applicative (liftA2)
+import Control.Exception (assert)
 
 import Foreign.Ptr (Ptr, castPtr)
 import Foreign.ForeignPtr (ForeignPtr, FinalizerPtr, newForeignPtr, withForeignPtr)
 import Foreign.Marshal.Array (peekArray0)
 import Foreign.Marshal.Unsafe (unsafeLocalState)
 import Foreign.C.Types (CInt)
-
 
 
 --import Control.Monad.Indexed.State
@@ -107,9 +107,8 @@ ipasirAdd :: CInt -> Solver s {-i Input-} ()
 ipasirAdd = toSolverSTwithLit {#call unsafe ipasir_add #}
 
 ipasirAssume :: CInt -> Solver s {-i Input-} ()
-ipasirAssume = \case
-    0   -> error "ipasirAssume: There is no variable 0."
-    lit -> toSolverSTwithLit {#call unsafe ipasir_assume #} lit
+ipasirAssume lit = assert (lit /= 0) $
+    toSolverSTwithLit {#call unsafe ipasir_assume #} lit
 
 ipasirSolve :: Solver s {-i Sat-} Bool
 ipasirSolve = isSolved <$> toSolverST {#call unsafe ipasir_solve #}
@@ -126,7 +125,7 @@ ipasirVal :: CInt -> Solver s {-Sat Sat-} Bool
 ipasirVal lit = (> 0) <$> toSolverSTwithLit {#call unsafe ipasir_val #} lit
 
 ipasirFailed :: CInt -> Solver s {-Unsat Unsat-} Bool
-ipasirFailed = \case
-    0   -> error "ipasirFailed: There is no assumed literal 0."
-    lit -> (> 0) <$> toSolverSTwithLit {#call unsafe ipasir_failed #} lit
+ipasirFailed lit = assert (lit /= 0) $ do
+    isInConflict <- toSolverSTwithLit {#call unsafe ipasir_failed #} lit
+    pure $ assert (isInConflict `elem` [0,1]) (isInConflict == 1)
 
