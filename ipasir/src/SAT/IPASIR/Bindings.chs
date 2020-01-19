@@ -107,9 +107,9 @@ ipasirAdd :: CInt -> Solver s {-i Input-} ()
 ipasirAdd = toSolverSTwithLit {#call unsafe ipasir_add #}
 
 ipasirAssume :: CInt -> Solver s {-i Input-} ()
-ipasirAssume lit = case lit of
-    0 -> error "ipasirAssume: There is no variable 0."
-    _ -> toSolverSTwithLit {#call unsafe ipasir_assume #} lit
+ipasirAssume = \case
+    0   -> error "ipasirAssume: There is no variable 0."
+    lit -> toSolverSTwithLit {#call unsafe ipasir_assume #} lit
 
 ipasirSolve :: Solver s {-i Sat-} Bool
 ipasirSolve = isSolved <$> toSolverST {#call unsafe ipasir_solve #}
@@ -119,16 +119,14 @@ ipasirSolve = isSolved <$> toSolverST {#call unsafe ipasir_solve #}
         10     -> True
         20     -> False
         0      -> error $ "ipasirSolve returned 0, but ipasir_set_terminate was not called."
-        retVal -> error $ "ipasirSolve returned " ++ show retVal ++ ", but must be either 0, 10 or 20"
+        retVal -> error $ "ipasirSolve must return either 0, 10 or 20 but returned " ++ show retVal
 
 -- return False if the assignment is arbitrary
 ipasirVal :: CInt -> Solver s {-Sat Sat-} Bool
-ipasirVal lit = case lit of
-    --_ -> (toEnum . fromIntegral) <$> toSolverSTwithLit {#call unsafe ipasir_val #} lit
-    _ -> (> 0) <$> toSolverSTwithLit {#call unsafe ipasir_val #} lit
+ipasirVal lit = (> 0) <$> toSolverSTwithLit {#call unsafe ipasir_val #} lit
 
 ipasirFailed :: CInt -> Solver s {-Unsat Unsat-} Bool
-ipasirFailed lit = case lit of
-    0 -> error "ipasirFailed: There is no assumed literal 0."
-    _ -> (> 0) <$> toSolverSTwithLit {#call unsafe ipasir_failed #} lit
+ipasirFailed = \case
+    0   -> error "ipasirFailed: There is no assumed literal 0."
+    lit -> (> 0) <$> toSolverSTwithLit {#call unsafe ipasir_failed #} lit
 
