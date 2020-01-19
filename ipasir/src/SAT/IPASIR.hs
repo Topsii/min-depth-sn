@@ -66,18 +66,10 @@ runSolver solver = IPASIR.runSolver (unSolver solver)
 -- runSolver solver = IPASIR.runSolver (unSolver (addClause [Positive $ Var maxBound, Negative $ Var maxBound] >> solver))
 
 newtype Var a = Var { unVar :: a }
-    deriving (Functor)
-
-deriving instance Eq a => Eq (Var a)
-deriving instance Ord a => Ord (Var a)
-deriving instance Bounded a => Bounded (Var a)
-deriving instance Enum a => Enum (Var a)
+    deriving (Functor, Eq, Ord, Bounded, Enum)
 
 data Lit a = Positive (Var a) | Negative (Var a)
-    deriving (Functor)
-
-deriving instance Eq a => Eq (Lit a)
-deriving instance Ord a => Ord (Lit a)
+    deriving (Functor, Eq, Ord)
 
 negate :: Lit v -> Lit v
 negate = \case

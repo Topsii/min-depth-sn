@@ -5,6 +5,7 @@ license:             BSD3
 author:              "Tobias Haslop"
 maintainer:          "haslop@uni-bremen.de"
 copyright:           "2018 Tobias Haslop"
+tested-with:         "GHC == 8.6.5"
 
 extra-source-files:
 - README.md
@@ -24,27 +25,38 @@ dependencies:
 ghc-options:
 - -Wall
 - -Werror
-- -fno-warn-orphans
-- -fno-warn-incomplete-patterns
-- -fno-warn-unused-top-binds
-- -fno-warn-unused-imports
+# - -fno-warn-orphans
+# - -fno-warn-incomplete-patterns
+# - -fno-warn-unused-top-binds
+# - -fno-warn-unused-imports
 - -O2
 # - -fignore-asserts
 
 library:
   source-dirs: src
+  exposed-modules:
+  - MinDepthSN.CEGIS
+  - Data.Enum
+  - MinDepthSN.Data.Combinatorics2.CombinationNoRepetition
+  - MinDepthSN.Data.Combinatorics2.VariationNoRepetition
+  - MinDepthSN.Data.Size
+  other-modules:
+  - MinDepthSN.Data.Gate
+  - MinDepthSN.Data.GateOrUnused
+  - MinDepthSN.Data.Unused
+  - MinDepthSN.Data.Value
+  - MinDepthSN.SAT.CounterExample.Constraints
+  - MinDepthSN.SAT.CounterExample.Variables
+  - MinDepthSN.SAT.Synthesis.ConstraintsBZ
+  - MinDepthSN.SAT.Synthesis.VarsBZ
+  - MinDepthSN.SAT.Constraints
+  - MinDepthSN.Data.Wire
+
   dependencies:
   - ipasir
   - containers
-  - split
-  - enumerate
   - array
   - finite-typelits
-#  - errors
-  - unordered-containers
-  - hashable
-  - ghc-typelits-natnormalise
-  - ghc-typelits-knownnat
   - generic-data
 
 

@@ -2,10 +2,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module MinDepthSN.CEGIS where
-
+import Debug.Trace
 import Data.List
 import Data.Bits
-import Enumerate ( enumerated )
 import SAT.IPASIR
 import MinDepthSN.SAT.Synthesis.ConstraintsBZ
 import MinDepthSN.SAT.Synthesis.VarsBZ
@@ -13,7 +12,6 @@ import MinDepthSN.SAT.CounterExample.Constraints
 -- import MinDepthSN.SAT.CounterExample.Variables
 -- import MinDepthSN.SAT.Synthesis.ConstraintsHaslop
 import MinDepthSN.Data.GateOrUnused
-import MinDepthSN.Data.Gate (Two)
 import MinDepthSN.Data.Size
 import MinDepthSN.Data.Value
 import Numeric.Natural
@@ -44,7 +42,7 @@ main :: IO ()
 -- main = print $ runSolver (addClauses minimalRepresentative >> solve)
 main = print networkSolution
 
-networkSolution :: Either [Bool] [StandardGateOrUnused]
+networkSolution :: Either [Bool] [GateOrUnused]
 networkSolution = runSolver $ do
     --addCNF representativesOfBzIsomorphicEqClasses
     let initCexCnt = 0
@@ -55,7 +53,7 @@ networkSolution = runSolver $ do
         Nothing -> error $ "no initial cex: " ++ show network
         Just cex -> findSortingNetwork (fromInteger initCexCnt) cex
 
--- findFirstNetwork :: SortOrder o => Integer -> ExceptRT (Maybe [GateOrUnused o]) (Solver s (NetworkSynthesis o)) [Bool]
+-- findFirstNetwork :: Integer -> ExceptRT (Maybe [GateOrUnused o]) (Solver s NetworkSynthesis) [Bool]
 -- findFirstNetwork initCexCnt = do
 --     network <- findNetwork initCexCnt
 --     let maybeCex = findCounterExample network
@@ -63,13 +61,13 @@ networkSolution = runSolver $ do
 --         Nothing -> error $ "no initial cex: " ++ show network
 --         Just cex -> findSortingNetwork (fromInteger initCexCnt+1) cex
 
-findNetwork :: Two f Channel => Integer -> Solver s (NetworkSynthesis f) [GateOrUnused f]
+findNetwork :: Integer -> Solver s NetworkSynthesis [GateOrUnused]
 findNetwork initCexCnt = do
     let initCexs = genericTake initCexCnt . prioritizeSmallWindows $ inputs
     let (_, sortsCexs) = mapAccumL (\cIdx cx -> (cIdx+1, sorts cIdx cx)) 0 initCexs
     r <- solveCNFs $ [usage, maximalFirstLayer] ++ sortsCexs
     if r
-        then trueAssigned enumerated
+        then trueAssigned [ minBound .. maxBound ]
         else error "no network was found initially"
 
 -- | Prioritize counterexample inputs with a small window size.
@@ -97,33 +95,26 @@ trailingOnes = length . takeWhile id . reverse
 --ExceptT Alternative/MonadPlus instance to collect cex for cegis?
 
 -- find a network, that sorts the given input and then look if there is still a counterexample input that is not sorted
-findSortingNetwork :: Two f Channel => Natural -> [Bool] -> Solver s (NetworkSynthesis f) (Either [Bool] [GateOrUnused f])
+findSortingNetwork :: Natural -> [Bool] -> Solver s NetworkSynthesis (Either [Bool] [GateOrUnused])
 findSortingNetwork cexIdx cex = do
     r <- solveCNFs [ sorts cexIdx cex ]
     if r then do
-        network <- trueAssigned enumerated
-        {-vals <- assignmentsOfValueVars cexIdx
-        let positions = (map fromDIMACS $ range minCounterExample maxCounterExample) :: [Var CounterExample]
-        let positionValues = zip vals positions-}
-        case findCounterExample {-  trace (show network ++ "\n" ++ show positionValues ++ "\n")-} network of
-            Just cex2 -> {-trace (show cexIdx ++ ": " ++ show cex2) $-} findSortingNetwork (cexIdx + 1) cex2
+        network <- trueAssigned [ minBound .. maxBound ]
+        -- vals <- assignments [Value_ cexIdx minBound .. Value_ cexIdx maxBound]
+        -- let positions = [ minBound .. maxBound ] :: [CounterExample]
+        -- let positionValues = zip vals positions
+        case findCounterExample {- $ trace (show network ++ "\n" ++ show positionValues ++ "\n") -} network of
+            Just cex2 -> trace (show cexIdx ++ ": " ++ (concatMap (show . fromEnum) cex2)) $ findSortingNetwork (cexIdx + 1) cex2
             Nothing -> return $ Right network
     else return $ Left cex
 
-findCounterExample :: Two f Channel => [GateOrUnused f] -> Maybe [Bool]
+findCounterExample :: [GateOrUnused] -> Maybe [Bool]
 findCounterExample network = runSolver $ do
     s <- solveCNFs [fixNetwork network, unsortedOutput]
     if s then do
-        --vals <- assignmentsOfRange minCounterExample maxCounterExample
-        --let positions = (map fromDIMACS $ range minCounterExample maxCounterExample) :: [Var CounterExample]
-        --let positionValues = zip vals positions
+        -- let positions = [ minBound .. maxBound ] :: [CounterExample]
+        -- vals <- assignments positions
+        -- let positionValues = zip vals positions
         counterExampleInput <- assignments inputValues
-        return $ Just counterExampleInput
-        --return $ Just (counterExampleInput, positionValues)
+        return $ Just {- $ trace (show positionValues)-}  counterExampleInput
     else return Nothing
-
-
-
-
-
---sorts = undefined

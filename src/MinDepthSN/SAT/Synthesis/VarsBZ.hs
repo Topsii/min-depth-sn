@@ -7,57 +7,42 @@
 module MinDepthSN.SAT.Synthesis.VarsBZ
     ( module Size
     , NetworkSynthesis(..)
-    , StandardNetworkSynthesis
-    , GeneralizedNetworkSynthesis
     ) where
 
 import SAT.IPASIR (AsVar(..))
 
 import Numeric.Natural
 import MinDepthSN.Data.Size (Channel, Layer, BetweenLayers)
-import MinDepthSN.Data.GateOrUnused 
-    ( GateOrUnused(..)
-    , SortingOrder(..)
-    , SortOrder
-    )
+import MinDepthSN.Data.GateOrUnused(GateOrUnused(..))
 import MinDepthSN.Data.Value (Value(..))
 import MinDepthSN.Data.Unused (Unused)
 import MinDepthSN.Data.Gate (Gate)
 
 import qualified MinDepthSN.Data.Size as Size
 
-import MinDepthSN.Data.Combinatorics2.CombinationNoRepetition
-import MinDepthSN.Data.Combinatorics2.VariationNoRepetition
-
--- type StandardNetworkSynthesis = NetworkSynthesis 'Standard
--- type GeneralizedNetworkSynthesis = NetworkSynthesis 'Generalized
-
-type StandardNetworkSynthesis = NetworkSynthesis CombinationNoRepetition
-type GeneralizedNetworkSynthesis = NetworkSynthesis VariationNoRepetition
-
-data NetworkSynthesis f
-    = GateOrUnused_ { unGateOrUnused_ :: GateOrUnused f }
+data NetworkSynthesis
+    = GateOrUnused_ { unGateOrUnused_ :: GateOrUnused }
     | Value_ { counterExIdx :: Natural, unValue_ :: Value }
     deriving (Eq, Ord)
 
-instance Show (NetworkSynthesis f) where
+instance Show NetworkSynthesis where
     show var = case var of
         GateOrUnused_ gu -> show gu
         Value_ cexIdx val -> show cexIdx ++ " " ++ show val
 
-instance AsVar (NetworkSynthesis f) Unused where
+instance AsVar NetworkSynthesis Unused where
     asVar = GateOrUnused_ . Unused_
 
-instance AsVar (NetworkSynthesis f) (Gate f) where
+instance AsVar NetworkSynthesis Gate where
     asVar = GateOrUnused_ . Gate_
 
-instance AsVar (NetworkSynthesis f) (GateOrUnused f) where
+instance AsVar NetworkSynthesis GateOrUnused where
     asVar = GateOrUnused_
 
-instance AsVar (NetworkSynthesis f) (Natural, Value) where
+instance AsVar NetworkSynthesis (Natural, Value) where
     asVar = uncurry Value_
 
-instance AsVar (NetworkSynthesis f) (NetworkSynthesis f) where
+instance AsVar NetworkSynthesis NetworkSynthesis where
     asVar = id
             
 -- | NetworkSynthesis values are enumerated as follows starting from 0:
@@ -76,11 +61,11 @@ instance AsVar (NetworkSynthesis f) (NetworkSynthesis f) where
 --    ... <-> ...
 --    ... <-> Value_ 1 maxBound
 --    ... <-> ...
-instance Enum (NetworkSynthesis f) where
+instance Enum NetworkSynthesis where
 
     toEnum i
         | i < 0 = error $ "toEnum (NetworkSynthesis): negative argument " ++ show i
-        | i <= fromEnum (GateOrUnused_ maxBound :: NetworkSynthesis o) = GateOrUnused_ $ toEnum (i - gateOrUnusedOffset)
+        | i <= fromEnum (GateOrUnused_ maxBound :: NetworkSynthesis) = GateOrUnused_ $ toEnum (i - gateOrUnusedOffset)
         | otherwise = Value_ (toEnum iter) (toEnum iVal)
         -- check if i < (2^n) * fromEnum (maxBound :: Value)
       where
@@ -89,7 +74,7 @@ instance Enum (NetworkSynthesis f) where
         gateOrUnusedOffset :: Int
         gateOrUnusedOffset = 0
         valueOffset :: Int
-        valueOffset = fromEnum (GateOrUnused_ maxBound :: NetworkSynthesis o) + 1
+        valueOffset = fromEnum (GateOrUnused_ maxBound :: NetworkSynthesis) + 1
 
     fromEnum var = case var of
         GateOrUnused_ gu -> gateOrUnusedOffset + fromEnum gu
@@ -99,4 +84,4 @@ instance Enum (NetworkSynthesis f) where
         gateOrUnusedOffset :: Int
         gateOrUnusedOffset = 0
         valueOffset :: Int
-        valueOffset = fromEnum (GateOrUnused_ maxBound :: NetworkSynthesis o) + 1
+        valueOffset = fromEnum (GateOrUnused_ maxBound :: NetworkSynthesis) + 1

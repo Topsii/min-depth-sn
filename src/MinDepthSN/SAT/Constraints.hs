@@ -10,8 +10,7 @@ import Data.List (inits, nub)
 import SAT.IPASIR (Var(..), Lit(..), negate)
 import MinDepthSN.Data.Size (Channel, BetweenLayers, before, after)
 import MinDepthSN.Data.Value (Value(..))
-import MinDepthSN.Data.GateOrUnused (GateOrUnused(..), SortOrder)
-import MinDepthSN.Data.Gate (Two)
+import MinDepthSN.Data.GateOrUnused (GateOrUnused(..))
 
 
 -- | @fixGateOrUnused (GateOrUnused i j k)@ either compares the values on the 
@@ -28,7 +27,7 @@ import MinDepthSN.Data.Gate (Two)
 --
 -- See 'minimum' and 'maximum' for the CNF.
 --
-fixGateOrUnused :: Two f Channel => GateOrUnused f -> [[Lit Value]]
+fixGateOrUnused :: GateOrUnused -> [[Lit Value]]
 fixGateOrUnused (GateOrUnused i j k) =
     minimum in1 in2 outMin ++ maximum in1 in2 outMax
   where

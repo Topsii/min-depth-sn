@@ -4,6 +4,7 @@
 {-# language TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE NoStarIsType #-}
 
 module MinDepthSN.Data.Size 
     ( 
@@ -31,21 +32,15 @@ module MinDepthSN.Data.Size
     , gatesInLayer
     , maxForwardChannel
     , minForwardChannel
+    -- * Used Channel
+    , UsedChannel
     ) where
 
 import Control.Monad (join)
 import Data.Maybe (fromJust)
 import Data.Finite (Finite, weaken, shiftN, weakenN, shift, add, strengthen )
 import GHC.TypeNats (Div, type (+), type (*), KnownNat)
-import Enumerate
-    ( Enumerable
-    , enumerated
-    , boundedEnumerated
-    , cardinality
-    , boundedCardinality
-    )
 
-import Data.Hashable
 import GHC.Generics (Generic)
 
 n :: Int
@@ -64,10 +59,10 @@ lastChannel :: Channel
 lastChannel = maxBound
 
 channels :: [Channel]
-channels = enumerated
+channels = [ minBound .. maxBound ]
 
 layers :: [Layer]
-layers = enumerated
+layers = [ minBound .. maxBound ]
 
 before :: Layer -> BetweenLayers
 before (Layer k) = BetweenLayers $ weaken k
@@ -104,11 +99,11 @@ timesTwo = join add
 timesTwoPlusOne :: (KnownNat m, KnownNat n, (n+n) ~ (m+1)) => Finite n -> Finite (n + n)
 timesTwoPlusOne = shift . fromJust . strengthen . timesTwo
 
-type N = 8
+type N = 12
 type D = 8
 
 gatesInLayer :: [GateInLayer]
-gatesInLayer = enumerated
+gatesInLayer = [ minBound .. maxBound ]
 
 newtype Channel = Channel (Finite N)
     deriving
@@ -158,11 +153,11 @@ newtype UsedChannel = UsedChannel (Finite ((N `Div` 2) * 2))
     , Generic
     , Real)
 
--- | Value at some chan, between some layers.
+-- | Indicates a position between some layers.
 --
--- A value of 0 indicates an input value of the network.
+-- A value of 0 indicates an input position (before the first layer).
 --
--- A value of d is an output value of the network.
+-- A value of d indicates an output position (after the last layer).
 newtype BetweenLayers = BetweenLayers (Finite (D+1))
     deriving
     ( Bounded
@@ -175,11 +170,27 @@ newtype BetweenLayers = BetweenLayers (Finite (D+1))
     , Generic
     , Real)
 
-instance Hashable (Finite n)
-instance Hashable Channel where
-instance Hashable Layer where
-instance Hashable BetweenLayers where
-instance Hashable GateInLayer where
+-- | Indicates some layer or the input before the first layer or the output
+-- after the last layer.
+--
+-- A value of 0 indicates an input position (before the first layer).
+--
+-- A value of 1 indicates the first layer.
+--
+-- A value of d indicates the last layer.
+--
+-- A value of d+1 indicates an output position (after the last layer).
+newtype Level = Level (Finite (D+2))
+    deriving
+    ( Bounded
+    , Enum
+    , Eq
+    , Integral -- ^ __Not__ modular arithmetic.
+    , Num      -- ^ Modular arithmetic. Only the fromInteger function 
+               -- is supposed to be useful.
+    , Ord
+    , Generic
+    , Real)
 
 
 instance (Show Channel) where
@@ -190,19 +201,5 @@ instance (Show BetweenLayers) where
     show (BetweenLayers k) = show $ toInteger k
 instance (Show GateInLayer) where
     show (GateInLayer a) = show $ toInteger a
-
-instance Enumerable Channel where
-    enumerated = boundedEnumerated
-    cardinality = boundedCardinality
-
-instance Enumerable Layer where
-    enumerated = boundedEnumerated
-    cardinality = boundedCardinality
-
-instance Enumerable BetweenLayers where
-    enumerated = boundedEnumerated
-    cardinality = boundedCardinality
-
-instance Enumerable GateInLayer where
-    enumerated = boundedEnumerated
-    cardinality = boundedCardinality
+instance (Show UsedChannel) where
+    show (UsedChannel i) = show $ toInteger i

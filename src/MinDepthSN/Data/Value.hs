@@ -1,6 +1,5 @@
 
 {-# language DeriveGeneric #-}
-{-# language DeriveAnyClass #-}
 {-# language PatternSynonyms #-}
 
 module MinDepthSN.Data.Value
@@ -11,14 +10,12 @@ module MinDepthSN.Data.Value
 
 import Generic.Data
 import GHC.Generics (Generic)
-import Enumerate (Enumerable)
-import Enumerate.Enum.Valid (Validatable, isValid)
 import MinDepthSN.Data.Size (Channel, BetweenLayers, firstChannel, secondChannel, lastChannel, beforeFirstLayer, afterLastLayer)
 
 -- | @Value i k@ creates a variable \(v_i^k\) representing the value on
 -- channel \(i\) between layers \(k\) and \(k+1\).
 data Value = MkValue { betweenLayers :: BetweenLayers, channel :: Channel }
-    deriving (Eq, Generic, Enumerable, Ord)
+    deriving (Eq, Generic, Ord)
 
 {-# COMPLETE Value #-}
 pattern Value :: Channel -> BetweenLayers -> Value
@@ -30,9 +27,6 @@ instance Show Value where
 instance Bounded Value where
     minBound = gminBound
     maxBound = gmaxBound
-
-instance Validatable Value where
-    isValid = const True
 
 instance Enum Value where
     toEnum = gtoFiniteEnum

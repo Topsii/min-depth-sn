@@ -2,7 +2,7 @@ name: ipasir
 version: 0.1.0.0
 author: "Tobias Haslop"
 maintainer: "haslop@uni-bremen.de"
-copyright: "2017 Philipp Dargel, 2018 Tobias Haslop"
+copyright: "2017 Philipp Dargel, 2018- Tobias Haslop"
 license: MIT
 ghc-options:
 - -static
@@ -24,7 +24,7 @@ library:
   extra-libraries: 
   - ipasircryptominisat5
   extra-lib-dirs:
-  - C:/PROGRA~1/cryptominisat5/lib
+  - C:/PROGRA~2/cryptominisat5/lib
 
   # extra-libraries: 
   # - jamsats

@@ -1,5 +1,4 @@
 {-# language DeriveGeneric #-}
-{-# language DeriveAnyClass #-}
 {-# language FlexibleContexts #-}
 
 {-# LANGUAGE PatternSynonyms #-}
@@ -11,15 +10,13 @@ module MinDepthSN.Data.Unused
 
 import Generic.Data
 import GHC.Generics (Generic)
-import Enumerate (Enumerable)
-import Enumerate.Enum.Valid (Validatable, isValid)
 import SAT.IPASIR (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size
 
 -- | @Unused i k@ creates a variable \(unused_i^k\) indicating a
 -- channel \(i\) is not used by any comparator gate in layer \(k\).
 data Unused = MkUnused { layer :: Layer, channel :: Channel }
-    deriving (Eq, Generic, Enumerable, Ord)
+    deriving (Eq, Generic, Ord)
 
 {-# COMPLETE Unused #-}
 pattern Unused :: Channel -> Layer -> Unused
@@ -31,9 +28,6 @@ instance Show Unused where
 instance Bounded Unused where
     minBound = gminBound
     maxBound = gmaxBound
-
-instance Validatable Unused where
-    isValid = const True
 
 instance Enum Unused where
     toEnum = gtoFiniteEnum

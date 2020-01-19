@@ -6,12 +6,12 @@ module Data.Enum where
 preceding :: forall a. (Bounded a, Enum a) => a -> [a]
 preceding x = map toEnum [ fromEnum (minBound :: a) .. fromEnum x - 1 ]
 
--- | > succeeding a == [ succ x .. maxBound ]
+-- | > succeeding x == [ succ x .. maxBound ]
 succeeding :: forall a. (Bounded a, Enum a) => a -> [a]
 succeeding x = map toEnum [ fromEnum x + 1 .. fromEnum (maxBound :: a) ]
 
 -- | > between from to == [ succ from .. pred to ]
-between :: (Bounded a, Enum a) => a -> a -> [a]
+between :: Enum a => a -> a -> [a]
 between from to = map toEnum [ fromEnum from + 1 .. fromEnum to - 1 ]
 
 -- | Default implementation for 'enumFrom'.
