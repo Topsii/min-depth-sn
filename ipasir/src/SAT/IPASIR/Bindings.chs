@@ -1,6 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
+{-# language LambdaCase #-}
 
 {-# LANGUAGE TypeFamilies #-}
 
@@ -106,26 +107,28 @@ ipasirAdd :: CInt -> Solver s {-i Input-} ()
 ipasirAdd = toSolverSTwithLit {#call unsafe ipasir_add #}
 
 ipasirAssume :: CInt -> Solver s {-i Input-} ()
-ipasirAssume = toSolverSTwithLit {#call unsafe ipasir_assume #}
+ipasirAssume lit = case lit of
+    0 -> error "ipasirAssume: There is no variable 0."
+    _ -> toSolverSTwithLit {#call unsafe ipasir_assume #} lit
 
 ipasirSolve :: Solver s {-i Sat-} Bool
 ipasirSolve = isSolved <$> toSolverST {#call unsafe ipasir_solve #}
   where
     isSolved :: CInt -> Bool
-    isSolved i = case i of
-        10 -> True
-        20 -> False
-        0  -> error $ "ipasirSolve returned 0, but ipasir_set_terminate was not called."
-        x  -> error $ "ipasirSolve returned " ++ show x ++ ", but must be either 0, 10 or 20"
+    isSolved = \case
+        10     -> True
+        20     -> False
+        0      -> error $ "ipasirSolve returned 0, but ipasir_set_terminate was not called."
+        retVal -> error $ "ipasirSolve returned " ++ show retVal ++ ", but must be either 0, 10 or 20"
 
+-- return False if the assignment is arbitrary
 ipasirVal :: CInt -> Solver s {-Sat Sat-} Bool
 ipasirVal lit = case lit of
-    0 -> error "ipasirVal: Cannot check for variable 0."
     --_ -> (toEnum . fromIntegral) <$> toSolverSTwithLit {#call unsafe ipasir_val #} lit
     _ -> (> 0) <$> toSolverSTwithLit {#call unsafe ipasir_val #} lit
 
 ipasirFailed :: CInt -> Solver s {-Unsat Unsat-} Bool
 ipasirFailed lit = case lit of
-    0 -> error "ipasirFailed: Cannot check for variable 0."
+    0 -> error "ipasirFailed: There is no assumed literal 0."
     _ -> (> 0) <$> toSolverSTwithLit {#call unsafe ipasir_failed #} lit
 
