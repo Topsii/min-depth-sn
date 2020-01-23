@@ -1,4 +1,5 @@
 {-# language DeriveGeneric #-}
+{-# language DerivingVia #-}
 {-# language FlexibleContexts #-}
 
 {-# LANGUAGE PatternSynonyms #-}
@@ -17,6 +18,8 @@ import MinDepthSN.Data.Size
 -- channel \(i\) is not used by any comparator gate in layer \(k\).
 data Unused = MkUnused { layer :: Layer, channel :: Channel }
     deriving (Eq, Generic, Ord)
+    deriving Enum via (FiniteEnumeration Unused)
+    deriving Bounded via (Generically Unused)
 
 {-# COMPLETE Unused #-}
 pattern Unused :: Channel -> Layer -> Unused
@@ -24,18 +27,6 @@ pattern Unused i k = MkUnused k i
 
 instance Show Unused where
     show (Unused i k) = "Unused " ++ show i ++ " " ++ show k
-
-instance Bounded Unused where
-    minBound = gminBound
-    maxBound = gmaxBound
-
-instance Enum Unused where
-    toEnum = gtoFiniteEnum
-    fromEnum = gfromFiniteEnum
-    enumFrom = gfiniteEnumFrom
-    enumFromThen = gfiniteEnumFromThen
-    enumFromTo = gfiniteEnumFromTo
-    enumFromThenTo = gfiniteEnumFromThenTo
 
 -- | Literal of 'Unused' with positive polarity.
 unusedLit :: AsVar v Unused => Channel -> Layer -> Lit v
