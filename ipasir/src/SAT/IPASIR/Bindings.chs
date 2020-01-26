@@ -1,4 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
 {-# language LambdaCase #-}
@@ -27,10 +28,10 @@ import Control.Monad.ST.Unsafe (unsafeIOToST)
 import Control.Monad.ST (ST, runST)
 import Control.Monad.Trans.Reader (ReaderT(..), runReaderT)
 import Control.Monad.Primitive
-
-import Data.Word (Word8)
-import Control.Applicative (liftA2)
 import Control.Exception (assert)
+
+import Data.Monoid (Ap(..))
+import Data.Word (Word8)
 
 import Foreign.Ptr (Ptr, castPtr)
 import Foreign.ForeignPtr (ForeignPtr, FinalizerPtr, newForeignPtr, withForeignPtr)
@@ -52,22 +53,11 @@ import Foreign.C.Types (CInt)
 
 newtype Solver s a = Solver { unSolver :: ReaderT (SolverPtr s) (ST s) a }
     deriving (Functor, Applicative, Monad)
+    deriving (Semigroup, Monoid) via (Ap (Solver s) a)
 
 instance PrimMonad (Solver s) where
     type PrimState (Solver s) = s
     primitive = Solver . primitive
-
--- | Same semigroup instance as 'Control.Monad.ST.ST' or 'System.IO.IO'.
--- Commonly combines @Solver s ()@ actions as there is semigroup instance for @()@.
--- With GHC 8.6.1 this can be derived with the deriving via language extension.
-instance Semigroup a => Semigroup (Solver s a) where
-    (<>) = liftA2 (<>)
-
--- | Same monoid instance as 'Control.Monad.ST.ST' or 'System.IO.IO'.
--- Commonly combines @Solver s ()@ actions as there is monoid instance for @()@.
--- With GHC 8.6.1 this can be derived with the deriving via language extension.
-instance Monoid a => Monoid (Solver s a) where
-    mempty = pure mempty
 
 runSolver :: (forall s. Solver s {-Input j-} a) -> a
 runSolver s = runST (ipasirInit >>= runReaderT (unSolver s))
@@ -82,7 +72,8 @@ foreign import ccall unsafe "SAT/IPASIR/Cryptominisat/C.chs.h &ipasir_release"
 -- An aforementioned IPASIR function call should not be an arbitrary IO effect.
 -- Instead only the solver-instance specific State Thread (ST) will be affected.
 toSolverST :: (Ptr () -> IO a) -> Solver s {-i j-} a
-toSolverST f = Solver . ReaderT $ \s -> unsafeIOToST $ withForeignPtr (fPtr s) f
+toSolverST f = Solver . ReaderT $
+    \solverPtr -> unsafeIOToST $ withForeignPtr (fPtr solverPtr) f
 
 -- | Same as 'toSolverST' except the converted function receives a 
 -- literal as an additional argument.
