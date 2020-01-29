@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# language DataKinds #-}
 {-# language TypeOperators #-}
 {-# language GeneralizedNewtypeDeriving #-}
@@ -12,7 +13,6 @@ module MinDepthSN.Data.Size
       Channel
     , n
     , firstChannel
-    , secondChannel
     , lastChannel
     , channels
     -- * Layer
@@ -40,6 +40,7 @@ import Control.Monad (join)
 import Data.Maybe (fromJust)
 import Data.Finite (Finite, weaken, shiftN, weakenN, shift, add, strengthen )
 import GHC.TypeNats (Div, type (+), type (*), KnownNat)
+import GHC.Arr
 
 import GHC.Generics (Generic)
 
@@ -51,9 +52,6 @@ d = length layers
 
 firstChannel :: Channel
 firstChannel = minBound
-
-secondChannel :: Channel
-secondChannel = succ firstChannel
 
 lastChannel :: Channel
 lastChannel = maxBound
@@ -114,6 +112,7 @@ newtype Channel = Channel (Finite N)
     , Num      -- ^ Modular arithmetic. Only the fromInteger function 
                -- is supposed to be useful.
     , Ord
+    , Ix
     , Generic
     , Real)
 
@@ -126,6 +125,7 @@ newtype Layer = Layer (Finite D)
     , Num      -- ^ Modular arithmetic. Only the fromInteger function 
                -- is supposed to be useful.
     , Ord
+    , Ix
     , Generic
     , Real)
 
@@ -138,6 +138,7 @@ newtype GateInLayer = GateInLayer (Finite (N `Div` 2))
     , Num      -- ^ Modular arithmetic. Only the fromInteger function 
                 -- is supposed to be useful.
     , Ord
+    , Ix
     , Generic
     , Real)
 
@@ -150,6 +151,7 @@ newtype UsedChannel = UsedChannel (Finite ((N `Div` 2) * 2))
     , Num      -- ^ Modular arithmetic. Only the fromInteger function 
                 -- is supposed to be useful.
     , Ord
+    , Ix
     , Generic
     , Real)
 
@@ -167,6 +169,7 @@ newtype BetweenLayers = BetweenLayers (Finite (D+1))
     , Num      -- ^ Modular arithmetic. Only the fromInteger function 
                -- is supposed to be useful.
     , Ord
+    , Ix
     , Generic
     , Real)
 
@@ -203,3 +206,9 @@ instance (Show GateInLayer) where
     show (GateInLayer a) = show $ toInteger a
 instance (Show UsedChannel) where
     show (UsedChannel i) = show $ toInteger i
+
+
+instance KnownNat n => Ix (Finite n) where
+    range (l, h) = [l .. h]
+    unsafeIndex (l, _) i = fromIntegral (i - l)
+    inRange (l, h) i = l <= i && i <= h

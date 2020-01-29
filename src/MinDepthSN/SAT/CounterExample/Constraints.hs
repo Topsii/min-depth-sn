@@ -9,9 +9,9 @@ import Data.List (inits, tails)
 import Data.Enum (succeeding)
 import SAT.IPASIR (Var(..), Lit(..), negate)
 import MinDepthSN.SAT.Constraints (fixGateOrUnused)
-import MinDepthSN.SAT.CounterExample.Variables (CounterExample(..), valueLit)
+import MinDepthSN.SAT.CounterExample.Variables (CounterExample(..))
 import MinDepthSN.Data.Size (channels, afterLastLayer)
-import MinDepthSN.Data.Value (outputValues)
+import MinDepthSN.Data.Value (outputValues, valueLit)
 import MinDepthSN.Data.GateOrUnused (GateOrUnused)
 --findCounterEx :: [Gate]
 --findCounterEx = undefined
@@ -55,10 +55,9 @@ sortedOutput =
 unsortedOutput :: [[Lit CounterExample]]
 unsortedOutput = zipWith (++) (inits outputOnes) (tails outputZeros)
   where
-    outputZeros ::  [Lit CounterExample]
+    outputZeros, outputOnes ::  [Lit CounterExample]
     outputZeros = map (Negative . Var . CounterExample) outputValues
-    outputOnes :: [Lit CounterExample]
-    outputOnes = map (Positive . Var . CounterExample) outputValues
+    outputOnes  = map (Positive . Var . CounterExample) outputValues
 
 -- | See 'MinDepthSN.SAT.Constraints.fixGateOrUnused'.
 fixNetwork :: [GateOrUnused] -> [[Lit CounterExample]]

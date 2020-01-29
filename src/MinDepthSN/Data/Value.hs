@@ -1,22 +1,26 @@
 
 {-# language DeriveGeneric #-}
 {-# language DerivingVia #-}
+{-# language FlexibleContexts #-}
 {-# language PatternSynonyms #-}
 
 module MinDepthSN.Data.Value
     ( Value(Value)
     , inputValues
     , outputValues
+    , valueLit
     ) where
 
+import Data.Ix
 import Generic.Data
 import GHC.Generics (Generic)
-import MinDepthSN.Data.Size (Channel, BetweenLayers, firstChannel, secondChannel, lastChannel, beforeFirstLayer, afterLastLayer)
+import SAT.IPASIR (AsVar(..), Lit, lit)
+import MinDepthSN.Data.Size (Channel, BetweenLayers, firstChannel, lastChannel, beforeFirstLayer, afterLastLayer)
 
 -- | @Value i k@ creates a variable \(v_i^k\) representing the value on
 -- channel \(i\) between layers \(k\) and \(k+1\).
 data Value = MkValue { betweenLayers :: BetweenLayers, channel :: Channel }
-    deriving (Generic, Eq, Ord)
+    deriving (Generic, Eq, Ord, Ix)
     deriving Enum via (FiniteEnumeration Value)
     deriving Bounded via (Generically Value)
 
@@ -29,16 +33,16 @@ instance Show Value where
 
 inputValues :: [Value]
 inputValues =
-    [ Value  firstChannel beforeFirstLayer
-    , Value secondChannel beforeFirstLayer
-      .. 
-      Value   lastChannel beforeFirstLayer
-    ]
+    range
+        ( Value firstChannel beforeFirstLayer
+        , Value lastChannel  beforeFirstLayer)
 
 outputValues :: [Value]
 outputValues =
-    [ Value  firstChannel afterLastLayer
-    , Value secondChannel afterLastLayer
-      .. 
-      Value   lastChannel afterLastLayer
-    ]
+    range
+        ( Value firstChannel afterLastLayer
+        , Value lastChannel  afterLastLayer)
+
+-- | Literal of 'Value' with positive polarity.
+valueLit :: AsVar v Value => Channel -> BetweenLayers -> Lit v
+valueLit i k = lit (Value i k)
