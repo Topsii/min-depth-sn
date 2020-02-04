@@ -1,0 +1,10 @@
+cradle:
+  stack:
+    - path: "./ipasir/"
+      component: "ipasir:lib"
+    - path: "./app/Main.hs"
+      component: "MinDepthSN:exe:MinDepthSN-exe"
+    - path: "./test/"
+      component: "MinDepthSN:test:MinDepthSN-test"
+    - path: "./"
+      component: "MinDepthSN:lib"
