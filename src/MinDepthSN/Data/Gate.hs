@@ -16,6 +16,7 @@ module MinDepthSN.Data.Gate
     ) where
 
 import Data.Proxy
+import Data.Ix
 import Type.Reflection
 import GHC.Generics (Generic)
 import Generic.Data
@@ -50,7 +51,7 @@ sortOrder
 -- | @Gate i j k@ creates a variable \(g_{i,j}^k\) representing a
 -- comparator gate where \(i\) and \(j\) are the channels and \(k\) is the layer.
 data Gate = MkGate { layer :: Layer, channels :: GateChannelSelection Channel }
-    deriving (Generic, Eq, Ord)
+    deriving (Generic, Eq, Ord, Ix)
     deriving Enum via (FiniteEnumeration Gate)
     deriving Bounded via (Generically Gate)
 

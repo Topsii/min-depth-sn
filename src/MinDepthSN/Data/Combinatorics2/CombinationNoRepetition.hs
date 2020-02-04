@@ -3,9 +3,12 @@
 
 module MinDepthSN.Data.Combinatorics2.CombinationNoRepetition
     ( CombinationNoRepetition(CombinationNoRepetition)
+    , zipWithSuccs
     ) where
 
 import Data.Enum (boundedEnumFrom, boundedEnumFromThen)
+import Data.Ix
+import Data.List (tails)
 import Control.Exception (assert)
 
 data CombinationNoRepetition a = MkCombinationNoRepetition a a
@@ -13,9 +16,37 @@ data CombinationNoRepetition a = MkCombinationNoRepetition a a
 
 {-# COMPLETE CombinationNoRepetition #-}
 pattern CombinationNoRepetition :: Ord a => a -> a -> CombinationNoRepetition a
-pattern CombinationNoRepetition a a' <- MkCombinationNoRepetition a a'
+pattern CombinationNoRepetition x y <- MkCombinationNoRepetition x y
   where
-    CombinationNoRepetition a a' = assert (a < a') $ MkCombinationNoRepetition a a'
+    CombinationNoRepetition x y = assert (x < y) $ MkCombinationNoRepetition x y
+
+zipWithSuccs :: (a -> a -> b) -> [a] -> [b]
+zipWithSuccs f l =
+  [ f x y 
+  | (x:successors) <- init $ tails l
+  , y <- successors
+  ]
+
+instance Ix a => Ix (CombinationNoRepetition a) where
+    range =
+      zipWithSuccs CombinationNoRepetition . range . extendBounds
+    index b (CombinationNoRepetition x y) = i_x * (size-1) - toTriangular i_x - 1 + i_y
+      where
+        i_x, i_y, size :: Int
+        i_x = index extendedBounds x
+        i_y = index extendedBounds y
+        size = rangeSize extendedBounds
+        extendedBounds :: (a, a)
+        extendedBounds = extendBounds b
+    inRange b (CombinationNoRepetition x y) =
+        inRange extendedBounds  x && inRange extendedBounds y
+      where
+        extendedBounds :: (a, a)
+        extendedBounds = extendBounds b
+
+extendBounds :: Ord a => (CombinationNoRepetition a, CombinationNoRepetition a) -> (a, a)
+extendBounds (CombinationNoRepetition x1 y1, CombinationNoRepetition x2 y2) =
+    (min x1 y1, max x2 y2)
 
 toTriangular :: Int -> Int
 toTriangular n = (n * (n + 1)) `div` 2

@@ -6,6 +6,7 @@ module MinDepthSN.Data.Combinatorics2.VariationNoRepetition
     ) where
 
 import Data.Enum (boundedEnumFrom, boundedEnumFromThen)
+import Data.Ix
 import Control.Exception (assert)
 
 data VariationNoRepetition a = MkVariationNoRepetition a a
@@ -17,6 +18,34 @@ pattern VariationNoRepetition a a' <- MkVariationNoRepetition a a'
   where
     VariationNoRepetition a a' = assert (a /= a') $ MkVariationNoRepetition a a'
 
+instance Ix a => Ix (VariationNoRepetition a) where
+    range b =
+        [
+            VariationNoRepetition x y
+        | y <- extendedRange
+        , x <- extendedRange
+        , x /= y
+        ]
+      where
+        extendedRange :: [a]
+        extendedRange = range $ extendBounds b
+    index b (VariationNoRepetition x y) = i_x * (size-1) + i_y - fromEnum (i_x <= i_y)
+      where
+        i_x, i_y, size :: Int
+        i_x = index extendedBounds x
+        i_y = index extendedBounds y
+        size = rangeSize extendedBounds
+        extendedBounds :: (a, a)
+        extendedBounds = extendBounds b
+    inRange b (VariationNoRepetition x y) =
+        inRange extendedBounds  x && inRange extendedBounds y
+      where
+        extendedBounds :: (a, a)
+        extendedBounds = extendBounds b
+
+extendBounds :: Ord a => (VariationNoRepetition a, VariationNoRepetition a) -> (a, a)
+extendBounds (VariationNoRepetition x1 y1, VariationNoRepetition x2 y2) =
+    (min x1 y1, max x2 y2)
 instance (Bounded a, Enum a, Eq a) => Enum (VariationNoRepetition a) where
     fromEnum (VariationNoRepetition x1 x2) =
         i_x1 * enumMax + i_x2 - fromEnum (i_x1 <= i_x2)

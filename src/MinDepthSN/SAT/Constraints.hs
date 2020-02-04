@@ -6,8 +6,9 @@
 module MinDepthSN.SAT.Constraints where
 
 import Prelude hiding (negate, maximum, minimum)
-import Data.List (inits, nub)
+import Data.List (nub)
 import SAT.IPASIR (Var(..), Lit(..), negate)
+import MinDepthSN.Data.Combinatorics2.CombinationNoRepetition (zipWithSuccs)
 import MinDepthSN.Data.Size (Channel, BetweenLayers, before, after)
 import MinDepthSN.Data.Value (Value(..))
 import MinDepthSN.Data.GateOrUnused (GateOrUnused(..))
@@ -96,15 +97,10 @@ exactlyOneOf lits = atLeastOneOf lits ++ atMostOneOf lits
 -- be true, since it would contradict the clause 
 -- \( \neg lit_1 \vee \neg lit_2 \).
 atMostOneOf :: forall a. Eq a => [Lit a] -> [[Lit a]]
-atMostOneOf lits =
-    [
-        [ -l1, -l2 ]
-    | (litsBeforeL2, l2) <- zip (inits uniqueLits) uniqueLits
-    , l1 <- litsBeforeL2
-    ]
+atMostOneOf = zipWithSuccs banCombin . nub
   where
-    uniqueLits :: [Lit a]
-    uniqueLits = nub lits
+    banCombin :: Lit a -> Lit a -> [Lit a]
+    banCombin l1 l2 = [ -l1, -l2 ]
 
 atLeastOneOf :: [Lit a] -> [[Lit a]]
 atLeastOneOf lits = [ lits ]

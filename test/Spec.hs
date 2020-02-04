@@ -51,3 +51,26 @@ variationsNoRep =
     , y <- [minBound .. maxBound]
     , x /= y
     ]
+
+-- combinationsNoRepInRange :: Ord a => [CombinationNoRepetition a]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
