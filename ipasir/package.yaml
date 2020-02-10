@@ -10,6 +10,7 @@ ghc-options:
 - -O2
 - -Wall
 - -Werror
+- -Wmissing-deriving-strategies 
 include-dirs:
 - c-sources
 build-tools:

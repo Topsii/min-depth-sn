@@ -26,7 +26,7 @@ import MinDepthSN.Data.Combinatorics2.CombinationNoRepetition
 import MinDepthSN.Data.Combinatorics2.VariationNoRepetition
 
 data SortingOrder = Standard | Generalized
-    deriving (Eq, Show)
+    deriving stock (Eq, Show)
 
 type GateChannelSelection = CombinationNoRepetition
 
@@ -51,7 +51,7 @@ sortOrder
 -- | @Gate i j k@ creates a variable \(g_{i,j}^k\) representing a
 -- comparator gate where \(i\) and \(j\) are the channels and \(k\) is the layer.
 data Gate = MkGate { layer :: Layer, channels :: GateChannelSelection Channel }
-    deriving (Generic, Eq, Ord, Ix)
+    deriving stock (Generic, Eq, Ord, Ix)
     deriving Enum via (FiniteEnumeration Gate)
     deriving Bounded via (Generically Gate)
 

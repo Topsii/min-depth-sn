@@ -1,8 +1,9 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# language DataKinds #-}
+{-# language KindSignatures #-}
+{-# language ScopedTypeVariables #-}
 {-# language MultiParamTypeClasses #-}
 {-# language FlexibleInstances #-}
+{-# language DerivingStrategies #-}
 
 module MinDepthSN.SAT.Synthesis.VarsBZ
     ( module Size
@@ -23,7 +24,7 @@ import qualified MinDepthSN.Data.Size as Size
 data NetworkSynthesis
     = GateOrUnused_ { unGateOrUnused_ :: GateOrUnused }
     | Value_ { counterExIdx :: Natural, unValue_ :: Value }
-    deriving (Eq, Ord)
+    deriving stock (Eq, Ord)
 
 instance Show NetworkSynthesis where
     show var = case var of

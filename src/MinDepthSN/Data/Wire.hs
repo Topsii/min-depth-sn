@@ -26,7 +26,7 @@ data Pin
     | Out Channel
 
 data Wire = Wire Channel Channel (CombinationNoRepetition BetweenLayers)
-    deriving (Eq, Ord, Generic)
+    deriving stock (Eq, Ord, Generic)
     deriving Bounded via (Generically Wire)
     deriving Enum via (FiniteEnumeration Wire)
 

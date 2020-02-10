@@ -4,6 +4,7 @@
 {-# language GeneralizedNewtypeDeriving #-}
 {-# language TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE NoStarIsType #-}
 
@@ -104,7 +105,7 @@ gatesInLayer :: [GateInLayer]
 gatesInLayer = [ minBound .. maxBound ]
 
 newtype Channel = Channel (Finite N)
-    deriving
+    deriving newtype
     ( Bounded
     , Enum
     , Eq
@@ -113,11 +114,11 @@ newtype Channel = Channel (Finite N)
                -- is supposed to be useful.
     , Ord
     , Ix
-    , Generic
     , Real)
+    deriving stock Generic
 
 newtype Layer = Layer (Finite D)
-    deriving
+    deriving newtype
     ( Bounded
     , Enum
     , Eq
@@ -126,11 +127,11 @@ newtype Layer = Layer (Finite D)
                -- is supposed to be useful.
     , Ord
     , Ix
-    , Generic
     , Real)
+    deriving stock Generic
 
 newtype GateInLayer = GateInLayer (Finite (N `Div` 2))
-    deriving
+    deriving newtype
     ( Bounded
     , Enum
     , Eq
@@ -139,11 +140,11 @@ newtype GateInLayer = GateInLayer (Finite (N `Div` 2))
                 -- is supposed to be useful.
     , Ord
     , Ix
-    , Generic
     , Real)
+    deriving stock Generic
 
 newtype UsedChannel = UsedChannel (Finite ((N `Div` 2) * 2))
-    deriving
+    deriving newtype
     ( Bounded
     , Enum
     , Eq
@@ -152,8 +153,8 @@ newtype UsedChannel = UsedChannel (Finite ((N `Div` 2) * 2))
                 -- is supposed to be useful.
     , Ord
     , Ix
-    , Generic
     , Real)
+    deriving stock Generic
 
 -- | Indicates a position between some layers.
 --
@@ -161,7 +162,7 @@ newtype UsedChannel = UsedChannel (Finite ((N `Div` 2) * 2))
 --
 -- A value of d indicates an output position (after the last layer).
 newtype BetweenLayers = BetweenLayers (Finite (D+1))
-    deriving
+    deriving newtype
     ( Bounded
     , Enum
     , Eq
@@ -170,8 +171,8 @@ newtype BetweenLayers = BetweenLayers (Finite (D+1))
                -- is supposed to be useful.
     , Ord
     , Ix
-    , Generic
     , Real)
+    deriving stock Generic
 
 -- | Indicates some layer or the input before the first layer or the output
 -- after the last layer.
@@ -184,7 +185,7 @@ newtype BetweenLayers = BetweenLayers (Finite (D+1))
 --
 -- A value of d+1 indicates an output position (after the last layer).
 newtype Level = Level (Finite (D+2))
-    deriving
+    deriving newtype
     ( Bounded
     , Enum
     , Eq
@@ -192,8 +193,8 @@ newtype Level = Level (Finite (D+2))
     , Num      -- ^ Modular arithmetic. Only the fromInteger function 
                -- is supposed to be useful.
     , Ord
-    , Generic
     , Real)
+    deriving stock Generic
 
 
 instance (Show Channel) where

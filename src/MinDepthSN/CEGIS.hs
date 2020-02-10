@@ -8,8 +8,8 @@ import Data.Bits
 import SAT.IPASIR
 import MinDepthSN.SAT.Synthesis.ConstraintsBZ
 import MinDepthSN.SAT.Synthesis.VarsBZ
-import MinDepthSN.SAT.CounterExample.Constraints
--- import MinDepthSN.SAT.CounterExample.Variables
+import MinDepthSN.SAT.Counterexample.Constraints
+-- import MinDepthSN.SAT.Counterexample.Variables
 -- import MinDepthSN.SAT.Synthesis.ConstraintsHaslop
 import MinDepthSN.Data.GateOrUnused
 import MinDepthSN.Data.Size

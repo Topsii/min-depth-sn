@@ -1,5 +1,6 @@
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# language PatternSynonyms #-}
+{-# language ScopedTypeVariables #-}
+{-# language DerivingStrategies #-}
 
 module MinDepthSN.Data.Combinatorics2.VariationNoRepetition
     ( VariationNoRepetition(VariationNoRepetition)
@@ -10,7 +11,7 @@ import Data.Ix
 import Control.Exception (assert)
 
 data VariationNoRepetition a = MkVariationNoRepetition a a
-    deriving (Eq, Ord, Show)
+    deriving stock (Eq, Ord, Show)
 
 {-# COMPLETE VariationNoRepetition #-}
 pattern VariationNoRepetition :: Eq a => a -> a -> VariationNoRepetition a

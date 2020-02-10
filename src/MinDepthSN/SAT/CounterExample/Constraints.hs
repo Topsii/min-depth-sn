@@ -2,14 +2,14 @@
 
 {-# LANGUAGE FlexibleContexts #-}
 
-module MinDepthSN.SAT.CounterExample.Constraints where
+module MinDepthSN.SAT.Counterexample.Constraints where
 
 import Prelude hiding (negate)
 import Data.List (inits, tails)
 import Data.Enum (succeeding)
 import SAT.IPASIR (Var(..), Lit(..), negate)
 import MinDepthSN.SAT.Constraints (fixGateOrUnused)
-import MinDepthSN.SAT.CounterExample.Variables (CounterExample(..))
+import MinDepthSN.SAT.Counterexample.Variables (Counterexample(..))
 import MinDepthSN.Data.Size (channels, afterLastLayer)
 import MinDepthSN.Data.Value (outputValues, valueLit)
 import MinDepthSN.Data.GateOrUnused (GateOrUnused)
@@ -29,7 +29,7 @@ import MinDepthSN.Data.GateOrUnused (GateOrUnused)
 -- \bigwedge_{0 \le i < j < n}
 --      \left( \neg v_i^d \vee v_j^d \right)
 -- \]
-sortedOutput :: [[Lit CounterExample]]
+sortedOutput :: [[Lit Counterexample]]
 sortedOutput =
     [
         [ - valueLit i afterLastLayer, valueLit j afterLastLayer ]
@@ -52,14 +52,14 @@ sortedOutput =
 --             \neg v_j^d
 --     \right)
 -- \]
-unsortedOutput :: [[Lit CounterExample]]
+unsortedOutput :: [[Lit Counterexample]]
 unsortedOutput = zipWith (++) (inits outputOnes) (tails outputZeros)
   where
-    outputZeros, outputOnes ::  [Lit CounterExample]
-    outputZeros = map (Negative . Var . CounterExample) outputValues
-    outputOnes  = map (Positive . Var . CounterExample) outputValues
+    outputZeros, outputOnes ::  [Lit Counterexample]
+    outputZeros = map (Negative . Var . Counterexample) outputValues
+    outputOnes  = map (Positive . Var . Counterexample) outputValues
 
 -- | See 'MinDepthSN.SAT.Constraints.fixGateOrUnused'.
-fixNetwork :: [GateOrUnused] -> [[Lit CounterExample]]
+fixNetwork :: [GateOrUnused] -> [[Lit Counterexample]]
 -- TODO: replace (map . map . fmap) by fmap for a CNF datatype like: data CNF a = CNF [[Lit a]] deriving Functor
-fixNetwork = concatMap ((map . map . fmap) CounterExample . fixGateOrUnused)
+fixNetwork = concatMap ((map . map . fmap) Counterexample . fixGateOrUnused)

@@ -1,22 +1,23 @@
 {-# language GeneralizedNewtypeDeriving #-}
+{-# language DerivingStrategies #-}
 {-# language PatternSynonyms #-}
 {-# language MultiParamTypeClasses #-}
 
-module MinDepthSN.SAT.CounterExample.Variables where
+module MinDepthSN.SAT.Counterexample.Variables where
 
 import SAT.IPASIR (AsVar(..))
 
 import MinDepthSN.Data.Value
 
-newtype CounterExample = CounterExample Value
-    deriving (Eq, Ord, Bounded, Enum)
+newtype Counterexample = Counterexample Value
+    deriving newtype (Eq, Ord, Bounded, Enum)
 
-instance Show CounterExample where
-    show (CounterExample value) = "CEx (" ++ show value ++ ")"
+instance Show Counterexample where
+    show (Counterexample value) = "CEx (" ++ show value ++ ")"
 
-instance AsVar CounterExample Value where
-    asVar = CounterExample
+instance AsVar Counterexample Value where
+    asVar = Counterexample
 
-instance AsVar CounterExample CounterExample where
+instance AsVar Counterexample Counterexample where
     asVar = id
 

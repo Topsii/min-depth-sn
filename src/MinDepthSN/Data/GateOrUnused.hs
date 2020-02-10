@@ -59,7 +59,7 @@ import qualified MinDepthSN.Data.Unused as Unused
 data GateOrUnused
     = Gate_ Gate
     | Unused_ Unused
-    deriving (Generic, Eq, Ord, Show)
+    deriving stock (Generic, Eq, Ord, Show)
     deriving Enum via (FiniteEnumeration GateOrUnused)
     deriving Bounded via (Generically GateOrUnused)
 

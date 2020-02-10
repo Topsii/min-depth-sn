@@ -1,6 +1,6 @@
 {-# language RankNTypes #-}
 {-# language GeneralizedNewtypeDeriving #-}
-{-# language StandaloneDeriving #-}
+{-# language DerivingStrategies #-}
 {-# language DeriveFunctor #-}
 {-# language TypeFamilies #-}
 
@@ -50,7 +50,7 @@ import Control.Monad.Primitive
 -- track max var index, ensure valid requests for ipasirVal/ipasirConflict
 
 newtype Solver s v a = Solver { unSolver :: IPASIR.Solver s a }
-    deriving (Functor, Applicative, Monad, Semigroup, Monoid)
+    deriving newtype (Functor, Applicative, Monad, Semigroup, Monoid)
 
 instance PrimMonad (Solver s v) where
     type PrimState (Solver s v) = s
@@ -66,10 +66,11 @@ runSolver solver = IPASIR.runSolver (unSolver solver)
 -- runSolver solver = IPASIR.runSolver (unSolver (addClause [Positive $ Var maxBound, Negative $ Var maxBound] >> solver))
 
 newtype Var a = Var { unVar :: a }
-    deriving (Functor, Eq, Ord, Bounded, Enum)
+    deriving newtype (Eq, Ord, Bounded, Enum)
+    deriving stock (Functor)
 
 data Lit a = Positive (Var a) | Negative (Var a)
-    deriving (Functor, Eq, Ord)
+    deriving stock (Functor, Eq, Ord)
 
 negate :: Lit v -> Lit v
 negate = \case

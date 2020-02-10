@@ -1,6 +1,5 @@
-
 #resolver: nightly-2018-12-17
-resolver: lts-14.11
+resolver: nightly-2020-02-08
 
 
 packages:

@@ -52,7 +52,7 @@ import Foreign.C.Types (CInt)
 
 
 newtype Solver s a = Solver { unSolver :: ReaderT (SolverPtr s) (ST s) a }
-    deriving (Functor, Applicative, Monad)
+    deriving newtype (Functor, Applicative, Monad)
     deriving (Semigroup, Monoid) via (Ap (Solver s) a)
 
 instance PrimMonad (Solver s) where

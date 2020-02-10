@@ -1,5 +1,6 @@
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# language PatternSynonyms #-}
+{-# language ScopedTypeVariables #-}
+{-# language DerivingStrategies #-}
 
 module MinDepthSN.Data.Combinatorics2.CombinationNoRepetition
     ( CombinationNoRepetition(CombinationNoRepetition)
@@ -12,7 +13,7 @@ import Data.List (tails)
 import Control.Exception (assert)
 
 data CombinationNoRepetition a = MkCombinationNoRepetition a a
-    deriving (Eq, Ord, Show)
+    deriving stock (Eq, Ord, Show)
 
 {-# COMPLETE CombinationNoRepetition #-}
 pattern CombinationNoRepetition :: Ord a => a -> a -> CombinationNoRepetition a
