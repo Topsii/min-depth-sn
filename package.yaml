@@ -35,23 +35,6 @@ ghc-options:
 
 library:
   source-dirs: src
-  exposed-modules:
-  - MinDepthSN.CEGIS
-  - Data.Enum
-  - MinDepthSN.Data.Combinatorics2.CombinationNoRepetition
-  - MinDepthSN.Data.Combinatorics2.VariationNoRepetition
-  - MinDepthSN.Data.Size
-  other-modules:
-  - MinDepthSN.Data.Gate
-  - MinDepthSN.Data.GateOrUnused
-  - MinDepthSN.Data.Unused
-  - MinDepthSN.Data.Value
-  - MinDepthSN.SAT.Counterexample.Constraints
-  - MinDepthSN.SAT.Counterexample.Variables
-  - MinDepthSN.SAT.Synthesis.ConstraintsBZ
-  - MinDepthSN.SAT.Synthesis.VarsBZ
-  - MinDepthSN.SAT.Constraints
-  - MinDepthSN.Data.Wire
 
   dependencies:
   - ipasir

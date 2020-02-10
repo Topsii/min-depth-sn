@@ -13,12 +13,14 @@ module MinDepthSN.Data.Size
     -- * Channel
       Channel
     , n
+    , N
     , firstChannel
     , lastChannel
     , channels
     -- * Layer
     , Layer
     , d
+    , D
     , layers
     -- * BetweenLayers
     , BetweenLayers
