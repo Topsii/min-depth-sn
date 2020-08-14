@@ -40,7 +40,7 @@ instance Ix a => Ix (CombinationNoRepetition a) where
         extendedBounds :: (a, a)
         extendedBounds = extendBounds b
     inRange b (CombinationNoRepetition x y) =
-        inRange extendedBounds  x && inRange extendedBounds y
+        inRange extendedBounds x && inRange extendedBounds y
       where
         extendedBounds :: (a, a)
         extendedBounds = extendBounds b

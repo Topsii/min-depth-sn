@@ -8,7 +8,6 @@ import MinDepthSN.Data.Size
 import MinDepthSN.Data.Combinatorics2.CombinationNoRepetition
 
 import Generic.Data
-import GHC.Generics
 
 
 -- data Wire = Wire FromPin ToPin

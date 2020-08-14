@@ -13,7 +13,6 @@ module MinDepthSN.Data.Value
 
 import Data.Ix
 import Generic.Data
-import GHC.Generics (Generic)
 import SAT.IPASIR (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size (Channel, BetweenLayers, firstChannel, lastChannel, beforeFirstLayer, afterLastLayer)
 

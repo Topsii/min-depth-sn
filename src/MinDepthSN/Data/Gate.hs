@@ -18,7 +18,6 @@ module MinDepthSN.Data.Gate
 import Data.Proxy
 import Data.Ix
 import Type.Reflection
-import GHC.Generics (Generic)
 import Generic.Data
 import SAT.IPASIR (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size (Channel, Layer)

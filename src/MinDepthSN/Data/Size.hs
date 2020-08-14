@@ -30,18 +30,26 @@ module MinDepthSN.Data.Size
     , afterLastLayer
     , beforeLayers
     , afterLayers
-    -- * GateInLayer
-    , GateInLayer
-    , gatesInLayer
-    , maxForwardChannel
-    , minForwardChannel
+    -- -- * GateInLayer
+    -- , GateInLayer
+    -- , gatesInLayer
+    -- , maxForwardChannel
+    -- , minForwardChannel
     -- * Used Channel
     , UsedChannel
     ) where
 
-import Control.Monad (join)
-import Data.Maybe (fromJust)
-import Data.Finite (Finite, weaken, shiftN, weakenN, shift, add, strengthen )
+-- import Control.Monad (join)
+-- import Data.Maybe (fromJust)
+import Data.Finite
+  ( Finite
+  , weaken
+  , shiftN
+--   , weakenN
+--   , shift
+--   , add
+--   , strengthen
+  )
 import GHC.TypeNats (Div, type (+), type (*), KnownNat)
 import GHC.Arr
 
@@ -83,28 +91,28 @@ afterLayers = map after layers
 beforeLayers :: [BetweenLayers]
 beforeLayers = map before layers
 
-minForwardChannel :: GateInLayer -> Channel
-minForwardChannel (GateInLayer g) = Channel . weakenIfOddN . timesTwo $ g
+-- minForwardChannel :: GateInLayer -> Channel
+-- minForwardChannel (GateInLayer g) = Channel . weakenIfOddN . timesTwo $ g
 
-maxForwardChannel :: GateInLayer -> Channel
-maxForwardChannel (GateInLayer g) = Channel . weakenIfOddN . timesTwoPlusOne $ g
+-- maxForwardChannel :: GateInLayer -> Channel
+-- maxForwardChannel (GateInLayer g) = Channel . weakenIfOddN . timesTwoPlusOne $ g
 
-weakenIfOddN :: Finite ((N `Div` 2) * 2) -> Finite N
-weakenIfOddN = weakenN
+-- weakenIfOddN :: Finite ((N `Div` 2) * 2) -> Finite N
+-- weakenIfOddN = weakenN
 
-timesTwo :: Finite n -> Finite (n + n)
-timesTwo = join add
+-- timesTwo :: Finite n -> Finite (n + n)
+-- timesTwo = join add
 
 -- there is no such KnownNat m for n ~ 0, thus maxForwardChannel does not work 
 -- for N = 0 or N = 1, since (N `Div` 2) ~ 0 in thoses cases.
-timesTwoPlusOne :: (KnownNat m, KnownNat n, (n+n) ~ (m+1)) => Finite n -> Finite (n + n)
-timesTwoPlusOne = shift . fromJust . strengthen . timesTwo
+-- timesTwoPlusOne :: (KnownNat m, KnownNat n, (n+n) ~ (m+1)) => Finite n -> Finite (n + n)
+-- timesTwoPlusOne = shift . fromJust . strengthen . timesTwo
 
-type N = 12
-type D = 8
+type N = 10
+type D = 7
 
-gatesInLayer :: [GateInLayer]
-gatesInLayer = [ minBound .. maxBound ]
+-- gatesInLayer :: [GateInLayer]
+-- gatesInLayer = [ minBound .. maxBound ]
 
 newtype Channel = Channel (Finite N)
     deriving newtype
@@ -132,18 +140,18 @@ newtype Layer = Layer (Finite D)
     , Real)
     deriving stock Generic
 
-newtype GateInLayer = GateInLayer (Finite (N `Div` 2))
-    deriving newtype
-    ( Bounded
-    , Enum
-    , Eq
-    , Integral -- ^ __Not__ modular arithmetic.
-    , Num      -- ^ Modular arithmetic. Only the fromInteger function 
-                -- is supposed to be useful.
-    , Ord
-    , Ix
-    , Real)
-    deriving stock Generic
+-- newtype GateInLayer = GateInLayer (Finite (N `Div` 2))
+--     deriving newtype
+--     ( Bounded
+--     , Enum
+--     , Eq
+--     , Integral -- ^ __Not__ modular arithmetic.
+--     , Num      -- ^ Modular arithmetic. Only the fromInteger function 
+--                 -- is supposed to be useful.
+--     , Ord
+--     , Ix
+--     , Real)
+--     deriving stock Generic
 
 newtype UsedChannel = UsedChannel (Finite ((N `Div` 2) * 2))
     deriving newtype
@@ -205,8 +213,8 @@ instance (Show Layer) where
     show (Layer k) = show $ toInteger k
 instance (Show BetweenLayers) where
     show (BetweenLayers k) = show $ toInteger k
-instance (Show GateInLayer) where
-    show (GateInLayer a) = show $ toInteger a
+-- instance (Show GateInLayer) where
+--     show (GateInLayer a) = show $ toInteger a
 instance (Show UsedChannel) where
     show (UsedChannel i) = show $ toInteger i
 

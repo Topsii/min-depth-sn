@@ -23,7 +23,6 @@ module MinDepthSN.Data.GateOrUnused
     , gateOrUnusedLit
     ) where
 import Generic.Data
-import GHC.Generics
 import SAT.IPASIR (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size (Channel, Layer)
 import MinDepthSN.Data.Gate

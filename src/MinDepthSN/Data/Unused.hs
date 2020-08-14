@@ -11,7 +11,6 @@ module MinDepthSN.Data.Unused
 
 import Data.Ix
 import Generic.Data
-import GHC.Generics (Generic)
 import SAT.IPASIR (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size
 

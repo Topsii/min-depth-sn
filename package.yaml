@@ -5,7 +5,7 @@ license:             BSD3
 author:              "Tobias Haslop"
 maintainer:          "haslop@uni-bremen.de"
 copyright:           "2018 Tobias Haslop"
-tested-with:         "GHC == 8.8.2"
+tested-with:         "GHC == 8.10.1"
 
 extra-source-files:
 - README.md
