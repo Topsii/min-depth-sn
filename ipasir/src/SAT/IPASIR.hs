@@ -123,6 +123,9 @@ instance Show a => Show (Lit a) where
         Positive variable -> '+' : show variable
         Negative variable -> '-' : show variable
 
+-- ideally use toIntegerSized from Data.Bits here to ensure the conversion
+-- between CInt and Int works as intended?
+-- Also ideally make sure we can add 1?
 instance Enum a => Dimacs (Var a) where
     toDIMACS variable = fromIntegral (fromEnum variable) + 1
     fromDIMACS integer = toEnum (fromIntegral integer - 1)

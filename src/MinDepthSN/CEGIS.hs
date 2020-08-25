@@ -81,9 +81,13 @@ findSortingNetwork cexIdx cex = do
         -- vals <- assignments [Value_ cexIdx minBound .. Value_ cexIdx maxBound]
         -- let positions = [ minBound .. maxBound ] :: [Counterexample]
         -- let positionValues = zip vals positions
-        case findCounterexample {- $ trace (show network ++ "\n" ++ show positionValues ++ "\n") -} network of
-            Just cex2 -> trace (show cexIdx ++ ": " ++ (concatMap (show . fromEnum) cex2)) $ findSortingNetwork (cexIdx + 1) cex2
-            Nothing -> return $ Right network
+        case findCounterexample
+            {-
+            $ trace (show network ++ "\n" ++ show positionValues ++ "\n")
+            -}
+            network of
+                Just cex2 -> trace (show cexIdx ++ ": " ++ (concatMap (show . fromEnum) cex2)) $ findSortingNetwork (cexIdx + 1) cex2
+                Nothing -> return $ Right network
     else return $ Left cex
 
 findCounterexample :: [GateOrUnused] -> Maybe [Bool]
@@ -94,5 +98,9 @@ findCounterexample network = runSolver $ do
         -- vals <- assignments positions
         -- let positionValues = zip vals positions
         counterexampleInput <- assignments inputValues
-        return $ Just {- $ trace (show positionValues)-}  counterexampleInput
+        return $ Just
+            {-
+            $ trace (show positionValues)
+            -}
+            counterexampleInput
     else return Nothing

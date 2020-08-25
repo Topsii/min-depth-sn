@@ -30,7 +30,7 @@ import MinDepthSN.Data.GateOrUnused (GateOrUnused(..))
 --
 fixGateOrUnused :: GateOrUnused -> [[Lit Value]]
 fixGateOrUnused (GateOrUnused i j k) =
-    minimum in1 in2 outMin ++ maximum in1 in2 outMax
+    minimum [in1, in2] outMin ++ maximum [in1, in2] outMax
   where
     beforeK, afterK :: BetweenLayers
     beforeK = before k
@@ -44,39 +44,35 @@ fixGateOrUnused (GateOrUnused i j k) =
 valueLit :: Channel -> BetweenLayers -> Lit Value
 valueLit i k = Positive $ Var $ Value i k
 
--- | @minimum a b min@ ensures \(a \wedge b \leftrightarrow min\).
---
--- @a@ and @b@ may be comparator inputs and @min@ the output on the lower
--- indexed channel.
+-- | @minimum @\(l_{\min}\)@ [@\(l_0\)@,@\(l_1\)@,@\(\dots\)@,@\(l_k\)@]@ ensures that in a satisfying assignment the value of literal \(l_{\min}\) is the minimum of the values of all the literals \(l_0,l_1\) up to \(l_k\).
 --
 -- \[
--- \left( min \vee \neg a \vee \neg b \right)
--- \wedge \left( \neg min \vee a \right)
--- \wedge \left( \neg min \vee b \right)
+-- \begin{aligned}
+-- \mathtt{minimum}\ l_{\min}\ \{l_0, l_1, \dots, l_k\} ={} & \left(  l_{\min} \vee \neg l_0 \vee l_1 \vee \dots \vee \neg l_k \right)\\
+--            & \wedge \left( \neg l_{\min} \vee l_0 \right)\\
+--            & \wedge \left( \neg l_{\min} \vee l_1 \right)\\
+--            & \dots\\
+--            & \wedge \left( \neg l_{\min} \vee l_k \right)\\
+-- \end{aligned}
 -- \]
-minimum :: Lit a -> Lit a -> Lit a -> [[Lit a]]
-minimum lit1 lit2 litMin =
-    [ [ litMin, -lit1, -lit2]
-    , [-litMin,  lit1]
-    , [-litMin,  lit2]
-    ]
+minimum :: [Lit a] -> Lit a -> [[Lit a]]
+minimum lits minOfLits =
+  (minOfLits : map negate lits) : map (\l -> [-minOfLits, l]) lits
 
--- | @maximum a b max@ ensures \(a \vee b \leftrightarrow max\).
---
--- @a@ and @b@ may be comparator inputs and @max@ the output on the higher
--- indexed channel.
+-- | @maximum @\(l_{\max}\)@ [@\(l_0\)@,@\(l_1\)@,@\(\dots\)@,@\(l_k\)@]@ ensures that in a satisfying assignment the value of literal \(l_{\max}\) is the maximum of the values of all the literals \(l_0,l_1\) up to \(l_k\).
 --
 -- \[
--- \left( \neg max \vee a \vee b \right)
--- \wedge \left( max \vee \neg a \right)
--- \wedge \left( max \vee \neg b \right)
+-- \begin{aligned}
+-- \mathtt{maximum}\ l_{\max}\ \{l_0, l_1, \dots, l_k\} ={} & \left( \neg l_{\max} \vee l_0 \vee l_1 \vee \dots \vee l_k \right)\\
+--            & \wedge \left( l_{\max} \vee \neg l_0 \right)\\
+--            & \wedge \left( l_{\max} \vee \neg l_1 \right)\\
+--            & \dots\\
+--            & \wedge \left( l_{\max} \vee \neg l_k \right)
+-- \end{aligned}
 -- \]
-maximum :: Lit a -> Lit a -> Lit a -> [[Lit a]]
-maximum lit1 lit2 litMax =
-    [ [-litMax,  lit1,  lit2]
-    , [ litMax, -lit1]
-    , [ litMax, -lit2]
-    ]
+maximum :: [Lit a] -> Lit a -> [[Lit a]]
+maximum lits maxOfLits =
+  (-maxOfLits : lits) : map (\l -> [maxOfLits, -l]) lits
 
 -- | @litImplies premissLit clauses@ ensures \(premissLit \rightarrow clauses\).
 --
