@@ -44,30 +44,36 @@ fixGateOrUnused (GateOrUnused i j k) =
 valueLit :: Channel -> BetweenLayers -> Lit Value
 valueLit i k = Positive $ Var $ Value i k
 
--- | @minimum @\(l_{\min}\)@ [@\(l_0\)@,@\(l_1\)@,@\(\dots\)@,@\(l_k\)@]@ ensures that in a satisfying assignment the value of literal \(l_{\min}\) is the minimum of the values of all the literals \(l_0,l_1\) up to \(l_k\).
+-- | @minimum @\(l_{\min}\)@ [@\(l_0\)@,@\(l_1\)@,@\(\dots\)@,@\(l_k\)@]@
+-- ensures that in a satisfying assignment the value of literal \(l_{\min}\) is
+-- the minimum of the values of all the literals \(l_0,l_1\) up to \(l_k\).
 --
 -- \[
 -- \begin{aligned}
--- \mathtt{minimum}\ l_{\min}\ \{l_0, l_1, \dots, l_k\} ={} & \left(  l_{\min} \vee \neg l_0 \vee l_1 \vee \dots \vee \neg l_k \right)\\
---            & \wedge \left( \neg l_{\min} \vee l_0 \right)\\
---            & \wedge \left( \neg l_{\min} \vee l_1 \right)\\
---            & \dots\\
---            & \wedge \left( \neg l_{\min} \vee l_k \right)\\
+-- \mathtt{minimum}\ l_{\min}\ \{l_0, l_1, \dots, l_k\} ={}
+--  & \left(  l_{\min} \vee \neg l_0 \vee l_1 \vee \dots \vee \neg l_k \right)\\
+--  & \wedge \left( \neg l_{\min} \vee l_0 \right)\\
+--  & \wedge \left( \neg l_{\min} \vee l_1 \right)\\
+--  & \dots\\
+--  & \wedge \left( \neg l_{\min} \vee l_k \right)\\
 -- \end{aligned}
 -- \]
 minimum :: [Lit a] -> Lit a -> [[Lit a]]
 minimum lits minOfLits =
   (minOfLits : map negate lits) : map (\l -> [-minOfLits, l]) lits
 
--- | @maximum @\(l_{\max}\)@ [@\(l_0\)@,@\(l_1\)@,@\(\dots\)@,@\(l_k\)@]@ ensures that in a satisfying assignment the value of literal \(l_{\max}\) is the maximum of the values of all the literals \(l_0,l_1\) up to \(l_k\).
+-- | @maximum @\(l_{\max}\)@ [@\(l_0\)@,@\(l_1\)@,@\(\dots\)@,@\(l_k\)@]@
+-- ensures that in a satisfying assignment the value of literal \(l_{\max}\) is
+-- the maximum of the values of all the literals \(l_0,l_1\) up to \(l_k\).
 --
 -- \[
 -- \begin{aligned}
--- \mathtt{maximum}\ l_{\max}\ \{l_0, l_1, \dots, l_k\} ={} & \left( \neg l_{\max} \vee l_0 \vee l_1 \vee \dots \vee l_k \right)\\
---            & \wedge \left( l_{\max} \vee \neg l_0 \right)\\
---            & \wedge \left( l_{\max} \vee \neg l_1 \right)\\
---            & \dots\\
---            & \wedge \left( l_{\max} \vee \neg l_k \right)
+-- \mathtt{maximum}\ l_{\max}\ \{l_0, l_1, \dots, l_k\} ={}
+--  & \left( \neg l_{\max} \vee l_0 \vee l_1 \vee \dots \vee l_k \right)\\
+--  & \wedge \left( l_{\max} \vee \neg l_0 \right)\\
+--  & \wedge \left( l_{\max} \vee \neg l_1 \right)\\
+--  & \dots\\
+--  & \wedge \left( l_{\max} \vee \neg l_k \right)
 -- \end{aligned}
 -- \]
 maximum :: [Lit a] -> Lit a -> [[Lit a]]
