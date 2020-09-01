@@ -5,6 +5,7 @@ module MinDepthSN.CEGIS where
 import Debug.Trace
 import Data.List
 import Data.Bits
+import Data.Word (Word32)
 import SAT.IPASIR
 import MinDepthSN.SAT.Synthesis.ConstraintsBZ
 import MinDepthSN.SAT.Synthesis.VarsBZ
@@ -15,7 +16,6 @@ import MinDepthSN.Data.Gate
 import MinDepthSN.Data.Unused
 import MinDepthSN.Data.Size
 import MinDepthSN.Data.Value
-import Numeric.Natural
 
 main :: IO ()
 -- main = print $ runSolver (addClauses minimalRepresentative >> solve)
@@ -74,7 +74,7 @@ trailingOnes = length . takeWhile id . reverse
 --ExceptT Alternative/MonadPlus instance to collect cex for cegis?
 
 -- find a network, that sorts the given input and then look if there is still a counterexample input that is not sorted
-findSortingNetwork :: Natural -> [Bool] -> Solver s NetworkSynthesis (Either [Bool] [Either Gate Unused])
+findSortingNetwork :: Word32 -> [Bool] -> Solver s NetworkSynthesis (Either [Bool] [Either Gate Unused])
 findSortingNetwork cexIdx cex = do
     r <- solveCNFs [ sorts cexIdx cex ]
     if r then do

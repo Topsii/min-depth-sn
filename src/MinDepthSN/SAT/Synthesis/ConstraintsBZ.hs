@@ -6,7 +6,7 @@
 module MinDepthSN.SAT.Synthesis.ConstraintsBZ where
 
 import Prelude hiding (negate)
-import Numeric.Natural (Natural)
+import Data.Word (Word32)
 import Data.Enum (succeeding, between)
 import SAT.IPASIR (Lit, negate, polarize, lit)
 import MinDepthSN.SAT.Synthesis.VarsBZ (NetworkSynthesis(Value_))
@@ -118,7 +118,7 @@ maximalFirstLayer
 -- See 'MinDepthSN.SAT.Constraints.litImplies' and
 -- 'MinDepthSN.SAT.Constraints.fixGateOrUnused' for the CNF.
 --
-update :: Natural -> [[Lit NetworkSynthesis]]
+update :: Word32 -> [[Lit NetworkSynthesis]]
 update cexIdx = concat
     [-- TODO: replace (map . map . fmap) by fmap for a CNF datatype like: data CNF a = CNF [[Lit a]] deriving Functor
         gateOrUnusedLit i j k `litImplies` (map . map . fmap) (Value_ cexIdx) (fixGateOrUnused (GateOrUnused i j k :: Either Gate Unused))
@@ -126,7 +126,7 @@ update cexIdx = concat
     ]
     
 
-sorts ::  Natural -> [Bool] -> [[Lit NetworkSynthesis]]
+sorts ::  Word32 -> [Bool] -> [[Lit NetworkSynthesis]]
 sorts cexIdx counterexample = concat
     [ zipWith fixValue counterexample inputValues
     , update cexIdx

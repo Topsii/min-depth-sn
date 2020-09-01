@@ -4,6 +4,8 @@
 {-# language MultiParamTypeClasses #-}
 {-# language FlexibleInstances #-}
 {-# language DerivingStrategies #-}
+{-# language DerivingVia #-}
+{-# language DeriveGeneric #-}
 
 module MinDepthSN.SAT.Synthesis.VarsBZ
     ( module Size
@@ -12,7 +14,8 @@ module MinDepthSN.SAT.Synthesis.VarsBZ
 
 import SAT.IPASIR (AsVar(..))
 
-import Numeric.Natural
+import Data.Word (Word32)
+import Generic.Data
 import MinDepthSN.Data.Size (Channel, Layer, BetweenLayers)
 import MinDepthSN.Data.GateOrUnused()
 import MinDepthSN.Data.Value (Value(..))
@@ -24,8 +27,9 @@ import qualified MinDepthSN.Data.Size as Size
 data NetworkSynthesis
     = Gate_ { unGate :: Gate }
     | Unused_ { unUnused :: Unused }
-    | Value_ { counterExIdx :: Natural, unValue_ :: Value }
-    deriving stock (Eq, Ord)
+    | Value_ { counterExIdx :: Word32, unValue_ :: Value }
+    deriving stock (Eq, Ord, Generic)
+    deriving Enum via (FiniteEnumeration NetworkSynthesis)
 
 instance Show NetworkSynthesis where
     show var = case var of
@@ -42,51 +46,9 @@ instance AsVar NetworkSynthesis Gate where
 instance AsVar NetworkSynthesis (Either Gate Unused) where
     asVar = either Gate_ Unused_
 
-instance AsVar NetworkSynthesis (Natural, Value) where
+instance AsVar NetworkSynthesis (Word32, Value) where
     asVar = uncurry Value_
 
 instance AsVar NetworkSynthesis NetworkSynthesis where
     asVar = id
             
--- | NetworkSynthesis values are enumerated as follows starting from 0:
--- where
---
---    0   <-> Gate_ minBound
---    ... <-> ...
---    ... <-> Gate_ maxBound
---    ... <-> Unused_ minBound
---    ... <-> ...
---    ... <-> Unused_ maxBound
---    ... <-> Value_ 0 minBound
---    ... <-> ...
---    ... <-> Value_ 0 maxBound
---    ... <-> Value_ 1 minBound
---    ... <-> ...
---    ... <-> Value_ 1 maxBound
---    ... <-> ...
-instance Enum NetworkSynthesis where
-
-    toEnum i
-        | i < 0 = error $ "toEnum (NetworkSynthesis): negative argument " ++ show i
-        | i <= fromEnum (Gate_ maxBound :: NetworkSynthesis) = Gate_ $ toEnum (i - gateOffset)
-        | i <= fromEnum (Unused_ maxBound :: NetworkSynthesis) = Unused_ $ toEnum (i - unusedOffset)
-        | otherwise = Value_ (toEnum iter) (toEnum iVal)
-        -- check if i < (2^n) * fromEnum (maxBound :: Value)
-      where
-        iter, iVal :: Int
-        (iter, iVal) = (i - valueOffset) `quotRem` fromEnum (maxBound :: Value)
-        gateOffset, unusedOffset, valueOffset :: Int
-        gateOffset = 0
-        unusedOffset = fromEnum (Gate_ maxBound :: NetworkSynthesis) + 1
-        valueOffset = fromEnum (Unused_ maxBound :: NetworkSynthesis) + 1
-
-    fromEnum var = case var of
-        Gate_ g -> gateOffset + fromEnum g
-        Unused_ u -> unusedOffset + fromEnum u
-        Value_ iter val  -> valueOffset  + fromEnum val +
-            fromEnum iter * (fromEnum (maxBound :: Value) + 1)
-      where
-        gateOffset, unusedOffset, valueOffset :: Int
-        gateOffset = 0
-        unusedOffset = fromEnum (Gate_ maxBound :: NetworkSynthesis) + 1
-        valueOffset = fromEnum (Unused_ maxBound :: NetworkSynthesis) + 1
