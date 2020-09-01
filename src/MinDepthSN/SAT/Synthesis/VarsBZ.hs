@@ -22,23 +22,25 @@ import MinDepthSN.Data.Gate (Gate)
 import qualified MinDepthSN.Data.Size as Size
 
 data NetworkSynthesis
-    = GateOrUnused_ { unGateOrUnused_ :: Either Gate Unused }
+    = Gate_ { unGate :: Gate }
+    | Unused_ { unUnused :: Unused }
     | Value_ { counterExIdx :: Natural, unValue_ :: Value }
     deriving stock (Eq, Ord)
 
 instance Show NetworkSynthesis where
     show var = case var of
-        GateOrUnused_ gu -> show gu
+        Gate_ g -> show g
+        Unused_ u -> show u
         Value_ cexIdx val -> show cexIdx ++ " " ++ show val
 
 instance AsVar NetworkSynthesis Unused where
-    asVar = GateOrUnused_ . Right
+    asVar = Unused_
 
 instance AsVar NetworkSynthesis Gate where
-    asVar = GateOrUnused_ . Left
+    asVar = Gate_
 
 instance AsVar NetworkSynthesis (Either Gate Unused) where
-    asVar = GateOrUnused_
+    asVar = either Gate_ Unused_
 
 instance AsVar NetworkSynthesis (Natural, Value) where
     asVar = uncurry Value_
@@ -66,23 +68,25 @@ instance Enum NetworkSynthesis where
 
     toEnum i
         | i < 0 = error $ "toEnum (NetworkSynthesis): negative argument " ++ show i
-        | i <= fromEnum (GateOrUnused_ maxBound :: NetworkSynthesis) = GateOrUnused_ $ toEnum (i - gateOrUnusedOffset)
+        | i <= fromEnum (Gate_ maxBound :: NetworkSynthesis) = Gate_ $ toEnum (i - gateOffset)
+        | i <= fromEnum (Unused_ maxBound :: NetworkSynthesis) = Unused_ $ toEnum (i - unusedOffset)
         | otherwise = Value_ (toEnum iter) (toEnum iVal)
         -- check if i < (2^n) * fromEnum (maxBound :: Value)
       where
         iter, iVal :: Int
         (iter, iVal) = (i - valueOffset) `quotRem` fromEnum (maxBound :: Value)
-        gateOrUnusedOffset :: Int
-        gateOrUnusedOffset = 0
-        valueOffset :: Int
-        valueOffset = fromEnum (GateOrUnused_ maxBound :: NetworkSynthesis) + 1
+        gateOffset, unusedOffset, valueOffset :: Int
+        gateOffset = 0
+        unusedOffset = fromEnum (Gate_ maxBound :: NetworkSynthesis) + 1
+        valueOffset = fromEnum (Unused_ maxBound :: NetworkSynthesis) + 1
 
     fromEnum var = case var of
-        GateOrUnused_ gu -> gateOrUnusedOffset + fromEnum gu
+        Gate_ g -> gateOffset + fromEnum g
+        Unused_ u -> unusedOffset + fromEnum u
         Value_ iter val  -> valueOffset  + fromEnum val +
             fromEnum iter * (fromEnum (maxBound :: Value) + 1)
       where
-        gateOrUnusedOffset :: Int
-        gateOrUnusedOffset = 0
-        valueOffset :: Int
-        valueOffset = fromEnum (GateOrUnused_ maxBound :: NetworkSynthesis) + 1
+        gateOffset, unusedOffset, valueOffset :: Int
+        gateOffset = 0
+        unusedOffset = fromEnum (Gate_ maxBound :: NetworkSynthesis) + 1
+        valueOffset = fromEnum (Unused_ maxBound :: NetworkSynthesis) + 1
