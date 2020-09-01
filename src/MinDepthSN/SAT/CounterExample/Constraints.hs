@@ -12,7 +12,8 @@ import MinDepthSN.SAT.Constraints (fixGateOrUnused)
 import MinDepthSN.SAT.Counterexample.Variables (Counterexample(..))
 import MinDepthSN.Data.Size (channels, afterLastLayer)
 import MinDepthSN.Data.Value (outputValues, valueLit)
-import MinDepthSN.Data.GateOrUnused (GateOrUnused)
+import MinDepthSN.Data.Gate (Gate)
+import MinDepthSN.Data.Unused (Unused)
 --findCounterEx :: [Gate]
 --findCounterEx = undefined
 
@@ -60,6 +61,6 @@ unsortedOutput = zipWith (++) (inits outputOnes) (tails outputZeros)
     outputOnes  = map (Positive . Var . Counterexample) outputValues
 
 -- | See 'MinDepthSN.SAT.Constraints.fixGateOrUnused'.
-fixNetwork :: [GateOrUnused] -> [[Lit Counterexample]]
+fixNetwork :: [Either Gate Unused] -> [[Lit Counterexample]]
 -- TODO: replace (map . map . fmap) by fmap for a CNF datatype like: data CNF a = CNF [[Lit a]] deriving Functor
 fixNetwork = concatMap ((map . map . fmap) Counterexample . fixGateOrUnused)

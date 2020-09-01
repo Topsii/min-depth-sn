@@ -11,7 +11,8 @@ import MinDepthSN.SAT.Synthesis.VarsBZ
 import MinDepthSN.SAT.Counterexample.Constraints
 -- import MinDepthSN.SAT.Counterexample.Variables
 -- import MinDepthSN.SAT.Synthesis.ConstraintsHaslop
-import MinDepthSN.Data.GateOrUnused
+import MinDepthSN.Data.Gate
+import MinDepthSN.Data.Unused
 import MinDepthSN.Data.Size
 import MinDepthSN.Data.Value
 import Numeric.Natural
@@ -20,7 +21,7 @@ main :: IO ()
 -- main = print $ runSolver (addClauses minimalRepresentative >> solve)
 main = print networkSolution
 
-networkSolution :: Either [Bool] [GateOrUnused]
+networkSolution :: Either [Bool] [Either Gate Unused]
 networkSolution = runSolver $ do
     --addCNF representativesOfBzIsomorphicEqClasses
     let initCexCnt = 0
@@ -39,7 +40,7 @@ networkSolution = runSolver $ do
 --         Nothing -> error $ "no initial cex: " ++ show network
 --         Just cex -> findSortingNetwork (fromInteger initCexCnt+1) cex
 
-findNetwork :: Integer -> Solver s NetworkSynthesis [GateOrUnused]
+findNetwork :: Integer -> Solver s NetworkSynthesis [Either Gate Unused]
 findNetwork initCexCnt = do
     let initCexs = genericTake initCexCnt . prioritizeSmallWindows $ inputs
     let (_, sortsCexs) = mapAccumL (\cIdx cx -> (cIdx+1, sorts cIdx cx)) 0 initCexs
@@ -73,7 +74,7 @@ trailingOnes = length . takeWhile id . reverse
 --ExceptT Alternative/MonadPlus instance to collect cex for cegis?
 
 -- find a network, that sorts the given input and then look if there is still a counterexample input that is not sorted
-findSortingNetwork :: Natural -> [Bool] -> Solver s NetworkSynthesis (Either [Bool] [GateOrUnused])
+findSortingNetwork :: Natural -> [Bool] -> Solver s NetworkSynthesis (Either [Bool] [Either Gate Unused])
 findSortingNetwork cexIdx cex = do
     r <- solveCNFs [ sorts cexIdx cex ]
     if r then do
@@ -90,7 +91,7 @@ findSortingNetwork cexIdx cex = do
                 Nothing -> return $ Right network
     else return $ Left cex
 
-findCounterexample :: [GateOrUnused] -> Maybe [Bool]
+findCounterexample :: [Either Gate Unused] -> Maybe [Bool]
 findCounterexample network = runSolver $ do
     s <- solveCNFs [fixNetwork network, unsortedOutput]
     if s then do

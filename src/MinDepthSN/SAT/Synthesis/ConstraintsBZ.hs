@@ -17,9 +17,9 @@ import MinDepthSN.SAT.Constraints
     , noneOf
     )
 import MinDepthSN.Data.Value (Value, inputValues, outputValues)
-import MinDepthSN.Data.GateOrUnused (GateOrUnused(..), gateOrUnusedLit)
-import MinDepthSN.Data.Unused (unusedLit)
-import MinDepthSN.Data.Gate (SortingOrder(..), sortOrder, gateLit)
+import MinDepthSN.Data.GateOrUnused ( Either(GateOrUnused), gateOrUnusedLit)
+import MinDepthSN.Data.Unused (Unused,unusedLit)
+import MinDepthSN.Data.Gate (Gate, SortingOrder(..), sortOrder, gateLit)
 import MinDepthSN.Data.Size (Layer, channels, layers, n)
 import Data.List (sort)
 
@@ -121,9 +121,10 @@ maximalFirstLayer
 update :: Natural -> [[Lit NetworkSynthesis]]
 update cexIdx = concat
     [-- TODO: replace (map . map . fmap) by fmap for a CNF datatype like: data CNF a = CNF [[Lit a]] deriving Functor
-        gateOrUnusedLit i j k `litImplies` (map . map . fmap) (Value_ cexIdx) (fixGateOrUnused (GateOrUnused i j k :: GateOrUnused))
-    | GateOrUnused i j k <- [ minBound .. maxBound ] :: [GateOrUnused]
+        gateOrUnusedLit i j k `litImplies` (map . map . fmap) (Value_ cexIdx) (fixGateOrUnused (GateOrUnused i j k :: Either Gate Unused))
+    | GateOrUnused i j k <- [ minBound .. maxBound ] :: [Either Gate Unused]
     ]
+    
 
 sorts ::  Natural -> [Bool] -> [[Lit NetworkSynthesis]]
 sorts cexIdx counterexample = concat

@@ -14,7 +14,7 @@ import SAT.IPASIR (AsVar(..))
 
 import Numeric.Natural
 import MinDepthSN.Data.Size (Channel, Layer, BetweenLayers)
-import MinDepthSN.Data.GateOrUnused(GateOrUnused(..))
+import MinDepthSN.Data.GateOrUnused()
 import MinDepthSN.Data.Value (Value(..))
 import MinDepthSN.Data.Unused (Unused)
 import MinDepthSN.Data.Gate (Gate)
@@ -22,7 +22,7 @@ import MinDepthSN.Data.Gate (Gate)
 import qualified MinDepthSN.Data.Size as Size
 
 data NetworkSynthesis
-    = GateOrUnused_ { unGateOrUnused_ :: GateOrUnused }
+    = GateOrUnused_ { unGateOrUnused_ :: Either Gate Unused }
     | Value_ { counterExIdx :: Natural, unValue_ :: Value }
     deriving stock (Eq, Ord)
 
@@ -32,12 +32,12 @@ instance Show NetworkSynthesis where
         Value_ cexIdx val -> show cexIdx ++ " " ++ show val
 
 instance AsVar NetworkSynthesis Unused where
-    asVar = GateOrUnused_ . Unused_
+    asVar = GateOrUnused_ . Right
 
 instance AsVar NetworkSynthesis Gate where
-    asVar = GateOrUnused_ . Gate_
+    asVar = GateOrUnused_ . Left
 
-instance AsVar NetworkSynthesis GateOrUnused where
+instance AsVar NetworkSynthesis (Either Gate Unused) where
     asVar = GateOrUnused_
 
 instance AsVar NetworkSynthesis (Natural, Value) where

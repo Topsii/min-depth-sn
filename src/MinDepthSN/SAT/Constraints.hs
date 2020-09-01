@@ -11,7 +11,9 @@ import SAT.IPASIR (Var(..), Lit(..), negate)
 import MinDepthSN.Data.Combinatorics2.CombinationNoRepetition (zipWithSuccs)
 import MinDepthSN.Data.Size (Channel, BetweenLayers, before, after)
 import MinDepthSN.Data.Value (Value(..))
-import MinDepthSN.Data.GateOrUnused (GateOrUnused(..))
+import MinDepthSN.Data.Gate (Gate(..))
+import MinDepthSN.Data.Unused (Unused(..))
+import MinDepthSN.Data.GateOrUnused (Either(GateOrUnused))
 
 
 -- | @fixGateOrUnused (GateOrUnused i j k)@ either compares the values on the 
@@ -28,7 +30,7 @@ import MinDepthSN.Data.GateOrUnused (GateOrUnused(..))
 --
 -- See 'minimum' and 'maximum' for the CNF.
 --
-fixGateOrUnused :: GateOrUnused -> [[Lit Value]]
+fixGateOrUnused :: Either Gate Unused -> [[Lit Value]]
 fixGateOrUnused (GateOrUnused i j k) =
     minimum [in1, in2] outMin ++ maximum [in1, in2] outMax
   where

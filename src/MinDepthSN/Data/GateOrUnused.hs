@@ -9,31 +9,19 @@
 
 {-# language FlexibleContexts #-}
 
-{-# language UndecidableInstances #-}
+{-# language FlexibleInstances #-}
+{-# language StandaloneDeriving #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module MinDepthSN.Data.GateOrUnused
-    ( GateOrUnused
-        ( GateOrUnused
-        -- , Gate
-        , Unused
-        , ..
-        )
-    , SortingOrder(..)
-    , SortOrder
+    ( Either(GateOrUnused)
     , gateOrUnusedLit
     ) where
 import Generic.Data
 import SAT.IPASIR (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size (Channel, Layer)
-import MinDepthSN.Data.Gate
-    ( Gate
-    , SortOrder
-    , SortingOrder(..)
-    , SortOrder
-    )
-import MinDepthSN.Data.Unused (Unused)
-import qualified MinDepthSN.Data.Gate as Gate
-import qualified MinDepthSN.Data.Unused as Unused
+import MinDepthSN.Data.Gate ( Gate(..))
+import MinDepthSN.Data.Unused (Unused(..))
 
 -- | A variable \(gu_{i,j}^k\) is either a comparator \(g\)ate variable or an 
 -- \(u\)nused variable.
@@ -55,35 +43,23 @@ import qualified MinDepthSN.Data.Unused as Unused
 -- The solver does not actually create, consider or solve \(gu_{i,j}^k\) 
 -- variables. For any occurrence of \(gu_{i,j}^k\) in formulas or clauses, its 
 -- definition is passed to the solver instead.
-data GateOrUnused
-    = Gate_ Gate
-    | Unused_ Unused
-    deriving stock (Generic, Eq, Ord, Show)
-    deriving Enum via (FiniteEnumeration GateOrUnused)
-    deriving Bounded via (Generically GateOrUnused)
-
-{-# COMPLETE  Gate,  Unused #-}
-{-# COMPLETE  Gate, Unused_ #-}
-{-# COMPLETE Gate_,  Unused #-}
-{-# COMPLETE Gate_, Unused_ #-}
 {-# COMPLETE GateOrUnused   #-}
-pattern Gate :: Channel -> Channel -> Layer -> GateOrUnused
-pattern Gate i j k = Gate_ (Gate.Gate i j k)
-
-pattern Unused :: Channel -> Layer -> GateOrUnused
-pattern Unused i k = Unused_ (Unused.Unused i k)
-
-pattern GateOrUnused :: Channel -> Channel -> Layer -> GateOrUnused
+pattern GateOrUnused :: Channel -> Channel -> Layer -> Either Gate Unused
 pattern GateOrUnused i j k <- (matchGateOrUnused -> (i, j, k)) where
     GateOrUnused i j k
-        | i /= j = Gate i j k
-        | otherwise = Unused i k
+        | i /= j = Left $ Gate i j k
+        | otherwise = Right $ Unused i k
 
-matchGateOrUnused :: GateOrUnused -> (Channel, Channel, Layer)
+matchGateOrUnused :: Either Gate Unused -> (Channel, Channel, Layer)
 matchGateOrUnused gu = case gu of
-    Gate i j k -> (i, j, k)
-    Unused i k -> (i, i, k)
+    Left (Gate i j k) -> (i, j, k)
+    Right (Unused i k) -> (i, i, k)
+
+deriving via (FiniteEnumeration (Either Gate Unused)) instance Enum (Either Gate Unused)
+deriving via (Generically (Either Gate Unused)) instance Bounded (Either Gate Unused)
 
 -- | Literal of 'GateOrUnused' with positive polarity.
-gateOrUnusedLit :: AsVar v GateOrUnused => Channel -> Channel -> Layer -> Lit v
-gateOrUnusedLit i j k = lit (GateOrUnused i j k)
+gateOrUnusedLit :: forall v. AsVar v (Either Gate Unused) => Channel -> Channel -> Layer -> Lit v
+gateOrUnusedLit i j k 
+    | i /= j = (lit :: Either Gate Unused -> Lit v) . Left $ Gate i j k
+    | otherwise = (lit :: Either Gate Unused -> Lit v) . Right $ Unused i k
