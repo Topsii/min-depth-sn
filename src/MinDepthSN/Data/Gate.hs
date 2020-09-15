@@ -8,6 +8,7 @@
 {-# language DataKinds #-}
 {-# language TypeFamilies #-}
 {-# language ScopedTypeVariables #-}
+{-# language ImportQualifiedPost #-}
 
 
 
@@ -15,7 +16,7 @@ module MinDepthSN.Data.Gate
     ( Gate(Gate)
     , gateLit
     , KnownNetType
-    , GateChannelOrdering
+    , GateChannelPairOrder
     , NetworkType(..)
     ) where
 
@@ -25,17 +26,18 @@ import Data.Typeable
 import Generic.Data
 import SAT.IPASIR (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size (Channel, Layer)
-import MinDepthSN.Data.Combinatorics2.Selection
+import Data.Pair (Pair(Pair))
+import Data.Pair qualified as Pair
 
 data NetworkType = Standard | Generalized
     deriving stock (Eq, Show)
 
-type family GateChannelOrdering (t :: NetworkType) where
-    GateChannelOrdering 'Standard    = 'Unordered
-    GateChannelOrdering 'Generalized = 'Ordered
+type family GateChannelPairOrder (t :: NetworkType) :: Pair.Order where
+    GateChannelPairOrder 'Standard    = 'Pair.Unordered
+    GateChannelPairOrder 'Generalized = 'Pair.Ordered
 
 class ( Typeable t
-      , Typeable (GateChannelOrdering t)
+      , Typeable (GateChannelPairOrder t)
       ) => KnownNetType (t :: NetworkType) where
 
 instance KnownNetType 'Standard
@@ -44,14 +46,14 @@ instance KnownNetType 'Generalized
 -- | @Gate i j k@ creates a variable \(g_{i,j}^k\) representing a
 -- comparator gate where \(i\) and \(j\) are the channels and \(k\) is the layer.
 data Gate (t :: NetworkType)
-    = MkGate Layer (Selection (GateChannelOrdering t) 'NoRepetition Channel)
+    = MkGate Layer (Pair (GateChannelPairOrder t) 'Pair.NoDuplicates Channel)
     deriving stock (Generic, Eq, Ord, Ix)
     deriving Enum via FiniteEnumeration (Gate t)
     deriving Bounded via Generically (Gate t)
 
 {-# COMPLETE Gate #-}
 pattern Gate :: KnownNetType t => Channel -> Channel -> Layer -> Gate t
-pattern Gate i j k = MkGate k (Selection i j)
+pattern Gate i j k = MkGate k (Pair i j)
 
 instance KnownNetType t => Show (Gate t) where
     showsPrec p (Gate i j k) = showParen (p >= 11) $

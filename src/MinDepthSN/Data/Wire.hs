@@ -5,7 +5,7 @@ module MinDepthSN.Data.Wire where
 
 import MinDepthSN.Data.Size
 
-import MinDepthSN.Data.Combinatorics2.CombinationNoRepetition
+import Data.Pair.UnorderedNoDuplicates
 
 import Generic.Data
 
@@ -17,14 +17,14 @@ import Generic.Data
 -- data ToPin = To UsedChannel Layer | Out Channel
 
 
--- data Sorted = Sorted (CombinationOfTwo Channel) BetweenLayers BetweenLayers
+-- data Sorted = Sorted (UnorderedOfTwo Channel) BetweenLayers BetweenLayers
 
 data Pin
     = In Channel
     | Inner UsedChannel Layer
     | Out Channel
 
-data Wire = Wire Channel Channel (CombinationNoRepetition BetweenLayers)
+data Wire = Wire Channel Channel (UnorderedNoDuplicates BetweenLayers)
     deriving stock (Eq, Ord, Generic)
     deriving Bounded via (Generically Wire)
     deriving Enum via (FiniteEnumeration Wire)
@@ -33,7 +33,7 @@ data Wire = Wire Channel Channel (CombinationNoRepetition BetweenLayers)
 -- pattern Wire i j k l = 
 
 instance Show Wire where
-    show (Wire i j (CombinationNoRepetition k l)) = "Wire " ++ show i ++ " " ++ show j ++ " " ++ show k ++ " " ++ show l
+    show (Wire i j (UnorderedNoDuplicates k l)) = "Wire " ++ show i ++ " " ++ show j ++ " " ++ show k ++ " " ++ show l
 
 -- FromChan ToChan FromLayer ToLayer
 -- 0 0 0 1

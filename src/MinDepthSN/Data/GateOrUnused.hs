@@ -9,6 +9,7 @@
 
 {-# language FlexibleContexts #-}
 
+{-# language ImportQualifiedPost #-}
 
 module MinDepthSN.Data.GateOrUnused
     ( GateOrUnused
@@ -23,9 +24,10 @@ import Data.Ix
 import Generic.Data
 import SAT.IPASIR (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size (Channel, Layer)
-import MinDepthSN.Data.Gate (Gate(..), KnownNetType, GateChannelOrdering, NetworkType)
+import MinDepthSN.Data.Gate (Gate(..), KnownNetType, GateChannelPairOrder, NetworkType)
 import MinDepthSN.Data.Unused (Unused(..))
-import MinDepthSN.Data.Combinatorics2.Selection
+import Data.Pair (Pair(Pair))
+import Data.Pair qualified as Pair
 
 -- | A variable \(gu_{i,j}^k\) is either a comparator \(g\)ate variable or an 
 -- \(u\)nused variable.
@@ -48,7 +50,7 @@ import MinDepthSN.Data.Combinatorics2.Selection
 -- variables. For any occurrence of \(gu_{i,j}^k\) in formulas or clauses, its 
 -- definition is passed to the solver instead.
 data GateOrUnused (t :: NetworkType) =
-    MkGateOrUnused Layer (Selection (GateChannelOrdering t) 'WithRepetition Channel)
+    MkGateOrUnused Layer (Pair (GateChannelPairOrder t) 'Pair.WithDuplicates Channel)
     deriving stock (Generic, Eq, Ord, Ix)
     deriving Enum via (FiniteEnumeration (GateOrUnused t))
     deriving Bounded via (Generically (GateOrUnused t))
@@ -69,7 +71,7 @@ pattern Unused_ u <- (match -> Right u) where
     Unused_ (Unused i k) = GateOrUnused i i k
 
 pattern GateOrUnused :: KnownNetType t => Channel -> Channel -> Layer -> GateOrUnused t
-pattern GateOrUnused i j k = MkGateOrUnused k (Selection i j)
+pattern GateOrUnused i j k = MkGateOrUnused k (Pair i j)
 
 match :: KnownNetType t => GateOrUnused t -> Either (Gate t) Unused
 match (GateOrUnused i j k)

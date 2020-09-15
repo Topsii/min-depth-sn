@@ -2,8 +2,8 @@
 {-# language ScopedTypeVariables #-}
 {-# language DerivingStrategies #-}
 
-module MinDepthSN.Data.Combinatorics2.CombinationWithRepetition
-    ( CombinationWithRepetition(CombinationWithRepetition)
+module Data.Pair.UnorderedWithDuplicates
+    ( UnorderedWithDuplicates(UnorderedWithDuplicates)
     , zipGEQsWith
     ) where
 
@@ -12,14 +12,14 @@ import Data.Ix
 import Data.List (tails)
 import Control.Exception (assert)
 
-data CombinationWithRepetition a = MkCombinationWithRepetition a a
+data UnorderedWithDuplicates a = MkUnorderedWithDuplicates a a
     deriving stock (Eq, Ord, Show)
 
-{-# COMPLETE CombinationWithRepetition #-}
-pattern CombinationWithRepetition :: Ord a => a -> a -> CombinationWithRepetition a
-pattern CombinationWithRepetition x y <- MkCombinationWithRepetition x y
+{-# COMPLETE UnorderedWithDuplicates #-}
+pattern UnorderedWithDuplicates :: Ord a => a -> a -> UnorderedWithDuplicates a
+pattern UnorderedWithDuplicates x y <- MkUnorderedWithDuplicates x y
   where
-    CombinationWithRepetition x y = assert (x <= y) $ MkCombinationWithRepetition x y
+    UnorderedWithDuplicates x y = assert (x <= y) $ MkUnorderedWithDuplicates x y
 
 zipGEQsWith :: (a -> a -> b) -> [a] -> [b]
 zipGEQsWith f l =
@@ -28,9 +28,9 @@ zipGEQsWith f l =
   , y <- geqs
   ]
 
-instance Ix a => Ix (CombinationWithRepetition a) where
-    range = zipGEQsWith CombinationWithRepetition . range . extendBounds
-    index b (CombinationWithRepetition x y) = i_x * (size-1) - toTriangular i_x + i_x + i_y
+instance Ix a => Ix (UnorderedWithDuplicates a) where
+    range = zipGEQsWith UnorderedWithDuplicates . range . extendBounds
+    index b (UnorderedWithDuplicates x y) = i_x * (size-1) - toTriangular i_x + i_x + i_y
       where
         i_x, i_y, size :: Int
         i_x = index extendedBounds x
@@ -38,14 +38,14 @@ instance Ix a => Ix (CombinationWithRepetition a) where
         size = rangeSize extendedBounds
         extendedBounds :: (a, a)
         extendedBounds = extendBounds b
-    inRange b (CombinationWithRepetition x y) =
+    inRange b (UnorderedWithDuplicates x y) =
         inRange extendedBounds x && inRange extendedBounds y
       where
         extendedBounds :: (a, a)
         extendedBounds = extendBounds b
 
-extendBounds :: Ord a => (CombinationWithRepetition a, CombinationWithRepetition a) -> (a, a)
-extendBounds (CombinationWithRepetition x1 y1, CombinationWithRepetition x2 y2) =
+extendBounds :: Ord a => (UnorderedWithDuplicates a, UnorderedWithDuplicates a) -> (a, a)
+extendBounds (UnorderedWithDuplicates x1 y1, UnorderedWithDuplicates x2 y2) =
     (min x1 y1, max x2 y2)
 
 toTriangular :: Int -> Int
@@ -57,15 +57,15 @@ fromTriangular tri_n = floor $ (sqrt (2 * float_tri_n + 0.25)) - 0.5
     float_tri_n :: Double
     float_tri_n = fromIntegral tri_n
 
-instance (Bounded a, Enum a, Ord a) => Enum (CombinationWithRepetition a) where
-    fromEnum (CombinationWithRepetition x1 x2) =
+instance (Bounded a, Enum a, Ord a) => Enum (UnorderedWithDuplicates a) where
+    fromEnum (UnorderedWithDuplicates x1 x2) =
         i_x1 * enumMax - toTriangular i_x1 + i_x1 + i_x2
       where
         i_x1, i_x2, enumMax :: Int
         i_x1 = fromEnum x1
         i_x2 = fromEnum x2
         enumMax = fromEnum (maxBound :: a)
-    toEnum n = CombinationWithRepetition (toEnum i_x1) (toEnum i_x2)
+    toEnum n = UnorderedWithDuplicates (toEnum i_x1) (toEnum i_x2)
       where
         i_x1, i_x2, enumMax, cardA, cardCombNoRep :: Int
         i_x1 = cardA - (1 + fromTriangular (cardCombNoRep - n))
@@ -76,6 +76,6 @@ instance (Bounded a, Enum a, Ord a) => Enum (CombinationWithRepetition a) where
     enumFrom = boundedEnumFrom
     enumFromThen = boundedEnumFromThen
 
-instance (Bounded a, Ord a) => Bounded (CombinationWithRepetition a) where
-    minBound = CombinationWithRepetition minBound minBound
-    maxBound = CombinationWithRepetition maxBound maxBound
+instance (Bounded a, Ord a) => Bounded (UnorderedWithDuplicates a) where
+    minBound = UnorderedWithDuplicates minBound minBound
+    maxBound = UnorderedWithDuplicates maxBound maxBound

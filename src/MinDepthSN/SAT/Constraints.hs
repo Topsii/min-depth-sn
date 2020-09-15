@@ -7,8 +7,8 @@ module MinDepthSN.SAT.Constraints where
 
 import Prelude hiding (negate, maximum, minimum)
 import Data.List (nub)
+import Data.Pair.UnorderedNoDuplicates (zipWithSuccs)
 import SAT.IPASIR (Lit(..), negate)
-import MinDepthSN.Data.Combinatorics2.CombinationNoRepetition (zipWithSuccs)
 import MinDepthSN.Data.Size (Channel, BetweenLayers, before, after)
 import MinDepthSN.Data.Value (Value(..))
 import MinDepthSN.Data.GateOrUnused (GateOrUnused(..))

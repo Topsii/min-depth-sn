@@ -5,7 +5,6 @@
 {-# language ScopedTypeVariables #-}
 {-# language MultiParamTypeClasses #-}
 {-# language FlexibleInstances #-}
-{-# language DerivingStrategies #-}
 
 module MinDepthSN.SAT.Synthesis.VarsBZ
     ( module Size
