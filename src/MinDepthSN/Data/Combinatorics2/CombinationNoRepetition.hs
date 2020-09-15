@@ -80,3 +80,4 @@ instance (Bounded a, Enum a, Ord a) => Enum (CombinationNoRepetition a) where
 instance (Bounded a, Enum a, Ord a) => Bounded (CombinationNoRepetition a) where
     minBound = toEnum 0
     maxBound = toEnum . subtract 1 . toTriangular $ fromEnum (maxBound :: a)
+    

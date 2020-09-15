@@ -9,31 +9,23 @@
 
 {-# language FlexibleContexts #-}
 
-{-# language UndecidableInstances #-}
 
 module MinDepthSN.Data.GateOrUnused
     ( GateOrUnused
         ( GateOrUnused
-        -- , Gate
-        , Unused
-        , ..
+        , Gate_
+        , Unused_
         )
-    , SortingOrder(..)
-    , SortOrder
     , gateOrUnusedLit
     ) where
+
+import Data.Ix
 import Generic.Data
 import SAT.IPASIR (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size (Channel, Layer)
-import MinDepthSN.Data.Gate
-    ( Gate
-    , SortOrder
-    , SortingOrder(..)
-    , SortOrder
-    )
-import MinDepthSN.Data.Unused (Unused)
-import qualified MinDepthSN.Data.Gate as Gate
-import qualified MinDepthSN.Data.Unused as Unused
+import MinDepthSN.Data.Gate (Gate(..), KnownNetType, GateChannelOrdering, NetworkType)
+import MinDepthSN.Data.Unused (Unused(..))
+import MinDepthSN.Data.Combinatorics2.Selection
 
 -- | A variable \(gu_{i,j}^k\) is either a comparator \(g\)ate variable or an 
 -- \(u\)nused variable.
@@ -55,35 +47,35 @@ import qualified MinDepthSN.Data.Unused as Unused
 -- The solver does not actually create, consider or solve \(gu_{i,j}^k\) 
 -- variables. For any occurrence of \(gu_{i,j}^k\) in formulas or clauses, its 
 -- definition is passed to the solver instead.
-data GateOrUnused
-    = Gate_ Gate
-    | Unused_ Unused
-    deriving stock (Generic, Eq, Ord, Show)
-    deriving Enum via (FiniteEnumeration GateOrUnused)
-    deriving Bounded via (Generically GateOrUnused)
+data GateOrUnused (t :: NetworkType) =
+    MkGateOrUnused Layer (Selection (GateChannelOrdering t) 'WithRepetition Channel)
+    deriving stock (Generic, Eq, Ord, Ix)
+    deriving Enum via (FiniteEnumeration (GateOrUnused t))
+    deriving Bounded via (Generically (GateOrUnused t))
 
-{-# COMPLETE  Gate,  Unused #-}
-{-# COMPLETE  Gate, Unused_ #-}
-{-# COMPLETE Gate_,  Unused #-}
+instance KnownNetType t => Show (GateOrUnused t) where
+    showsPrec p (Gate_ g)   = showParen (p >= 11) $ showString "Gate_"   . showChar ' ' . showsPrec 11 g 
+    showsPrec p (Unused_ u) = showParen (p >= 11) $ showString "Unused_" . showChar ' ' . showsPrec 11 u
+
 {-# COMPLETE Gate_, Unused_ #-}
 {-# COMPLETE GateOrUnused   #-}
-pattern Gate :: Channel -> Channel -> Layer -> GateOrUnused
-pattern Gate i j k = Gate_ (Gate.Gate i j k)
 
-pattern Unused :: Channel -> Layer -> GateOrUnused
-pattern Unused i k = Unused_ (Unused.Unused i k)
+pattern Gate_ :: KnownNetType t => Gate t -> GateOrUnused t
+pattern Gate_ g <- (match -> Left g) where
+    Gate_ (Gate i j k) = GateOrUnused i j k
 
-pattern GateOrUnused :: Channel -> Channel -> Layer -> GateOrUnused
-pattern GateOrUnused i j k <- (matchGateOrUnused -> (i, j, k)) where
-    GateOrUnused i j k
-        | i /= j = Gate i j k
-        | otherwise = Unused i k
+pattern Unused_ :: KnownNetType t => Unused -> GateOrUnused t
+pattern Unused_ u <- (match -> Right u) where
+    Unused_ (Unused i k) = GateOrUnused i i k
 
-matchGateOrUnused :: GateOrUnused -> (Channel, Channel, Layer)
-matchGateOrUnused gu = case gu of
-    Gate i j k -> (i, j, k)
-    Unused i k -> (i, i, k)
+pattern GateOrUnused :: KnownNetType t => Channel -> Channel -> Layer -> GateOrUnused t
+pattern GateOrUnused i j k = MkGateOrUnused k (Selection i j)
+
+match :: KnownNetType t => GateOrUnused t -> Either (Gate t) Unused
+match (GateOrUnused i j k)
+    | i /= j    = Left $ Gate i j k
+    | otherwise = Right $ Unused i k
 
 -- | Literal of 'GateOrUnused' with positive polarity.
-gateOrUnusedLit :: AsVar v GateOrUnused => Channel -> Channel -> Layer -> Lit v
-gateOrUnusedLit i j k = lit (GateOrUnused i j k)
+gateOrUnusedLit :: forall v t. (KnownNetType t, AsVar (v t) (GateOrUnused t)) => Channel -> Channel -> Layer -> Lit (v t)
+gateOrUnusedLit i j k = lit (GateOrUnused i j k :: GateOrUnused t)

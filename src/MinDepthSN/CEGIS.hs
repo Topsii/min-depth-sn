@@ -1,5 +1,5 @@
+{-# LANGUAGE DataKinds #-}
 
-{-# LANGUAGE FlexibleContexts #-}
 
 module MinDepthSN.CEGIS where
 import Debug.Trace
@@ -12,15 +12,16 @@ import MinDepthSN.SAT.Counterexample.Constraints
 -- import MinDepthSN.SAT.Counterexample.Variables
 -- import MinDepthSN.SAT.Synthesis.ConstraintsHaslop
 import MinDepthSN.Data.GateOrUnused
+import MinDepthSN.Data.Gate (KnownNetType, NetworkType(..))
 import MinDepthSN.Data.Size
 import MinDepthSN.Data.Value
-import Numeric.Natural
+import Data.Word (Word32)
 
 main :: IO ()
 -- main = print $ runSolver (addClauses minimalRepresentative >> solve)
-main = print networkSolution
+main = print (networkSolution :: Either [Bool] [GateOrUnused 'Standard])
 
-networkSolution :: Either [Bool] [GateOrUnused]
+networkSolution :: KnownNetType t => Either [Bool] [GateOrUnused t]
 networkSolution = runSolver $ do
     --addCNF representativesOfBzIsomorphicEqClasses
     let initCexCnt = 0
@@ -39,7 +40,7 @@ networkSolution = runSolver $ do
 --         Nothing -> error $ "no initial cex: " ++ show network
 --         Just cex -> findSortingNetwork (fromInteger initCexCnt+1) cex
 
-findNetwork :: Integer -> Solver s NetworkSynthesis [GateOrUnused]
+findNetwork :: KnownNetType t => Integer -> Solver s (NetworkSynthesis t) [GateOrUnused t]
 findNetwork initCexCnt = do
     let initCexs = genericTake initCexCnt . prioritizeSmallWindows $ inputs
     let (_, sortsCexs) = mapAccumL (\cIdx cx -> (cIdx+1, sorts cIdx cx)) 0 initCexs
@@ -73,7 +74,7 @@ trailingOnes = length . takeWhile id . reverse
 --ExceptT Alternative/MonadPlus instance to collect cex for cegis?
 
 -- find a network, that sorts the given input and then look if there is still a counterexample input that is not sorted
-findSortingNetwork :: Natural -> [Bool] -> Solver s NetworkSynthesis (Either [Bool] [GateOrUnused])
+findSortingNetwork :: KnownNetType t => Word32 -> [Bool] -> Solver s (NetworkSynthesis t) (Either [Bool] [GateOrUnused t])
 findSortingNetwork cexIdx cex = do
     r <- solveCNFs [ sorts cexIdx cex ]
     if r then do
@@ -90,7 +91,7 @@ findSortingNetwork cexIdx cex = do
                 Nothing -> return $ Right network
     else return $ Left cex
 
-findCounterexample :: [GateOrUnused] -> Maybe [Bool]
+findCounterexample :: KnownNetType t => [GateOrUnused t] -> Maybe [Bool] -- unnecessary KnownNetType constraint?
 findCounterexample network = runSolver $ do
     s <- solveCNFs [fixNetwork network, unsortedOutput]
     if s then do

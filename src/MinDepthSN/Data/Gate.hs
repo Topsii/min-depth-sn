@@ -4,66 +4,62 @@
 {-# language PatternSynonyms #-}
 {-# language ViewPatterns #-}
 {-# language FlexibleContexts #-}
+{-# language KindSignatures #-}
+{-# language DataKinds #-}
+{-# language TypeFamilies #-}
+{-# language ScopedTypeVariables #-}
 
 
 
 module MinDepthSN.Data.Gate
     ( Gate(Gate)
-    , SortingOrder(..)
-    , SortOrder
-    , sortOrder
     , gateLit
+    , KnownNetType
+    , GateChannelOrdering
+    , NetworkType(..)
     ) where
 
 import Data.Proxy
 import Data.Ix
-import Type.Reflection
+import Data.Typeable 
 import Generic.Data
 import SAT.IPASIR (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size (Channel, Layer)
-import MinDepthSN.Data.Combinatorics2.CombinationNoRepetition
-import MinDepthSN.Data.Combinatorics2.VariationNoRepetition
+import MinDepthSN.Data.Combinatorics2.Selection
 
-data SortingOrder = Standard | Generalized
+data NetworkType = Standard | Generalized
     deriving stock (Eq, Show)
 
-type GateChannelSelection = CombinationNoRepetition
+type family GateChannelOrdering (t :: NetworkType) where
+    GateChannelOrdering 'Standard    = 'Unordered
+    GateChannelOrdering 'Generalized = 'Ordered
 
-class SortOrder f where
-    toGateChannels :: Proxy f -> Channel -> Channel -> f Channel
-    fromGateChannels :: f Channel -> (Channel, Channel)
+class ( Typeable t
+      , Typeable (GateChannelOrdering t)
+      ) => KnownNetType (t :: NetworkType) where
 
-instance SortOrder CombinationNoRepetition where
-    toGateChannels = const CombinationNoRepetition
-    fromGateChannels (CombinationNoRepetition i j) = (i, j)
-
-instance SortOrder VariationNoRepetition where
-    toGateChannels = const VariationNoRepetition
-    fromGateChannels (VariationNoRepetition i j) = (i, j)
-
-sortOrder :: SortingOrder
-sortOrder
-    | someTypeRep (Proxy :: Proxy GateChannelSelection) == someTypeRep (Proxy :: Proxy CombinationNoRepetition) = Standard
-    | someTypeRep (Proxy :: Proxy GateChannelSelection) == someTypeRep (Proxy :: Proxy VariationNoRepetition) =  Generalized
-    | otherwise = error "the sort order must either be standard or generalized"
+instance KnownNetType 'Standard
+instance KnownNetType 'Generalized
 
 -- | @Gate i j k@ creates a variable \(g_{i,j}^k\) representing a
 -- comparator gate where \(i\) and \(j\) are the channels and \(k\) is the layer.
-data Gate = MkGate { layer :: Layer, channels :: GateChannelSelection Channel }
+data Gate (t :: NetworkType) = MkGate { layer :: Layer, channels :: Selection (GateChannelOrdering t) 'NoRepetition Channel }
     deriving stock (Generic, Eq, Ord, Ix)
-    deriving Enum via (FiniteEnumeration Gate)
-    deriving Bounded via (Generically Gate)
+    deriving Enum via FiniteEnumeration (Gate t)
+    deriving Bounded via Generically (Gate t)
 
 {-# COMPLETE Gate #-}
-pattern Gate :: Channel -> Channel -> Layer -> Gate
-pattern Gate i j k <- MkGate k  (fromGateChannels -> (i,j))
-  where
-    Gate i j k = MkGate k (toGateChannels (Proxy :: Proxy GateChannelSelection) i j)
+pattern Gate :: KnownNetType t => Channel -> Channel -> Layer -> Gate t
+pattern Gate i j k = MkGate k (Selection i j)
 
-instance Show Gate where
-        show (Gate i j k) = show sortOrder ++ "Gate " 
-            ++ show i ++ " " ++ show j ++ " " ++ show k
+instance KnownNetType t => Show (Gate t) where
+    showsPrec p (Gate i j k) = showParen (p >= 11) $
+        showsTypeRep (typeRep (Proxy :: Proxy t)) .
+        showString "Gate" . showChar ' ' .
+        showsPrec 11 i . showChar ' ' .
+        showsPrec 11 j . showChar ' ' . 
+        showsPrec 11 k
 
 -- | Literal of 'Gate' with positive polarity.
-gateLit :: AsVar v Gate => Channel -> Channel -> Layer -> Lit v
-gateLit i j k = lit (Gate i j k)
+gateLit :: forall v t. (KnownNetType t, AsVar (v t) (Gate t)) => Channel -> Channel -> Layer -> Lit (v t)
+gateLit i j k = lit (Gate i j k :: Gate t)

@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# language DataKinds #-}
 {-# language KindSignatures #-}
 {-# language ScopedTypeVariables #-}
@@ -12,77 +14,39 @@ module MinDepthSN.SAT.Synthesis.VarsBZ
 
 import SAT.IPASIR (AsVar(..))
 
-import Numeric.Natural
+import Generic.Data
+import Data.Word (Word32)
 import MinDepthSN.Data.Size (Channel, Layer, BetweenLayers)
 import MinDepthSN.Data.GateOrUnused(GateOrUnused(..))
 import MinDepthSN.Data.Value (Value(..))
 import MinDepthSN.Data.Unused (Unused)
-import MinDepthSN.Data.Gate (Gate)
+import MinDepthSN.Data.Gate (Gate, KnownNetType)
 
 import qualified MinDepthSN.Data.Size as Size
 
-data NetworkSynthesis
-    = GateOrUnused_ { unGateOrUnused_ :: GateOrUnused }
-    | Value_ { counterExIdx :: Natural, unValue_ :: Value }
-    deriving stock (Eq, Ord)
+data NetworkSynthesis t
+    = GateOrUnused_ { unGateOrUnused_ :: GateOrUnused t }
+    | Value_ { counterExIdx :: Word32, unValue_ :: Value }
+    deriving stock (Generic, Eq, Ord)
+    deriving Enum via (FiniteEnumeration (NetworkSynthesis t))
 
-instance Show NetworkSynthesis where
+instance KnownNetType t => Show (NetworkSynthesis t) where
     show var = case var of
         GateOrUnused_ gu -> show gu
         Value_ cexIdx val -> show cexIdx ++ " " ++ show val
 
-instance AsVar NetworkSynthesis Unused where
+instance KnownNetType t => AsVar (NetworkSynthesis t) Unused where
     asVar = GateOrUnused_ . Unused_
 
-instance AsVar NetworkSynthesis Gate where
+instance KnownNetType t => AsVar (NetworkSynthesis t) (Gate t) where
     asVar = GateOrUnused_ . Gate_
 
-instance AsVar NetworkSynthesis GateOrUnused where
+instance KnownNetType t => AsVar (NetworkSynthesis t) (GateOrUnused t) where
     asVar = GateOrUnused_
 
-instance AsVar NetworkSynthesis (Natural, Value) where
+instance KnownNetType t => AsVar (NetworkSynthesis t) (Word32, Value) where
     asVar = uncurry Value_
 
-instance AsVar NetworkSynthesis NetworkSynthesis where
+instance KnownNetType t => AsVar (NetworkSynthesis t) (NetworkSynthesis t) where
     asVar = id
             
--- | NetworkSynthesis values are enumerated as follows starting from 0:
--- where
---
---    0   <-> Gate_ minBound
---    ... <-> ...
---    ... <-> Gate_ maxBound
---    ... <-> Unused_ minBound
---    ... <-> ...
---    ... <-> Unused_ maxBound
---    ... <-> Value_ 0 minBound
---    ... <-> ...
---    ... <-> Value_ 0 maxBound
---    ... <-> Value_ 1 minBound
---    ... <-> ...
---    ... <-> Value_ 1 maxBound
---    ... <-> ...
-instance Enum NetworkSynthesis where
-
-    toEnum i
-        | i < 0 = error $ "toEnum (NetworkSynthesis): negative argument " ++ show i
-        | i <= fromEnum (GateOrUnused_ maxBound :: NetworkSynthesis) = GateOrUnused_ $ toEnum (i - gateOrUnusedOffset)
-        | otherwise = Value_ (toEnum iter) (toEnum iVal)
-        -- check if i < (2^n) * fromEnum (maxBound :: Value)
-      where
-        iter, iVal :: Int
-        (iter, iVal) = (i - valueOffset) `quotRem` fromEnum (maxBound :: Value)
-        gateOrUnusedOffset :: Int
-        gateOrUnusedOffset = 0
-        valueOffset :: Int
-        valueOffset = fromEnum (GateOrUnused_ maxBound :: NetworkSynthesis) + 1
-
-    fromEnum var = case var of
-        GateOrUnused_ gu -> gateOrUnusedOffset + fromEnum gu
-        Value_ iter val  -> valueOffset  + fromEnum val +
-            fromEnum iter * (fromEnum (maxBound :: Value) + 1)
-      where
-        gateOrUnusedOffset :: Int
-        gateOrUnusedOffset = 0
-        valueOffset :: Int
-        valueOffset = fromEnum (GateOrUnused_ maxBound :: NetworkSynthesis) + 1

@@ -1,3 +1,7 @@
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# language DataKinds #-}
 {-# language TypeOperators #-}
@@ -51,9 +55,76 @@ import Data.Finite
 --   , strengthen
   )
 import GHC.TypeNats (Div, type (+), type (*), KnownNat)
+-- import GHC.TypeNats (Nat)
 import GHC.Arr
 
 import GHC.Generics (Generic)
+
+-- data ChannelCnt where
+--     MkChannelCnt :: Nat -> ChannelCnt
+
+-- type family ChannelCntDotNat (n :: ChannelCnt) where
+--     ChannelCntDotNat ('MkChannelCnt nat) = nat
+
+-- class (KnownNat (ChannelCntDotNat n)) => KnownChannelCnt n
+
+-- data LayerCnt where
+--     MkLayerCnt :: Nat -> LayerCnt
+--     deriving stock Show
+
+-- instance Show Nat where
+--     show _ = "Ha"
+
+-- type family LayerCntDotNat (d :: LayerCnt) :: Nat where
+--     LayerCntDotNat ('MkLayerCnt nat) = nat
+
+-- class (KnownNat (LayerCntDotNat d)) => KnownLayerCnt d
+
+-- data NetSize where
+--     MkSize :: ChannelCnt -> LayerCnt -> NetSize
+
+-- type family SizeDotChannelCnt (s :: NetSize) :: ChannelCnt where
+--     SizeDotChannelCnt ('MkSize n _d) = n
+
+-- type family SizeDotLayerCnt (s :: NetSize) :: LayerCnt where
+--     SizeDotLayerCnt ('MkSize _n d) = d
+
+-- class (KnownChannelCnt (SizeDotChannelCnt s), KnownLayerCnt (SizeDotLayerCnt s)) => KnownNetSize s
+
+
+
+
+
+
+
+
+
+
+-- -- class (KnownNat (GetChannelCnt a)) => KnownChannelCnt2 (a :: k) where
+-- --     type GetChannelCnt :: k -> Nat
+
+-- -- instance KnownChannelCnt2 NetSize where
+-- --     type GetChannelCnt ('MkSize n _d) n 
+
+-- class (KnownNat (GetLayerCnt a)) => KnownLayerCnt2 (a :: k) where
+--     type GetLayerCnt a :: Nat
+
+-- instance KnownLayerCnt2 (f ::) where
+--     type GetLayerCnt ('MkLayerCnt d) = d 
+--     -- type GetLayerCnt a = LayerCntDotNat a
+
+-- -- instance KnownLayerCnt2 LayerCnt where
+-- --     -- type GetLayerCnt ('MkLayerCnt d) = d 
+-- --     type GetLayerCnt a = LayerCntDotNat a
+
+-- instance KnownLayerCnt2 NetSize where
+--     type GetLayerCnt ('MkSize _n (MkLayerCnt d)) = d 
+
+-- -- class (KnownChannelCnt2 s, KnownLayerCnt2 s) => KnownNetSize2 s
+
+
+
+
 
 n :: Int
 n = length channels

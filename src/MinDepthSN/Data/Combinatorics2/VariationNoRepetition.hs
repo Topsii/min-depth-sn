@@ -6,7 +6,7 @@ module MinDepthSN.Data.Combinatorics2.VariationNoRepetition
     ( VariationNoRepetition(VariationNoRepetition)
     ) where
 
-import Data.Enum (boundedEnumFrom, boundedEnumFromThen)
+import GHC.Enum (boundedEnumFrom, boundedEnumFromThen)
 import Data.Ix
 import Control.Exception (assert)
 
@@ -21,10 +21,9 @@ pattern VariationNoRepetition a a' <- MkVariationNoRepetition a a'
 
 instance Ix a => Ix (VariationNoRepetition a) where
     range b =
-        [
-            VariationNoRepetition x y
-        | y <- extendedRange
-        , x <- extendedRange
+        [ VariationNoRepetition x y
+        | x <- extendedRange
+        , y <- extendedRange
         , x /= y
         ]
       where
@@ -39,7 +38,7 @@ instance Ix a => Ix (VariationNoRepetition a) where
         extendedBounds :: (a, a)
         extendedBounds = extendBounds b
     inRange b (VariationNoRepetition x y) =
-        inRange extendedBounds  x && inRange extendedBounds y
+        inRange extendedBounds x && inRange extendedBounds y
       where
         extendedBounds :: (a, a)
         extendedBounds = extendBounds b

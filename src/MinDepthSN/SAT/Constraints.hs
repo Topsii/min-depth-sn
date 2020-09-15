@@ -12,6 +12,7 @@ import MinDepthSN.Data.Combinatorics2.CombinationNoRepetition (zipWithSuccs)
 import MinDepthSN.Data.Size (Channel, BetweenLayers, before, after)
 import MinDepthSN.Data.Value (Value(..))
 import MinDepthSN.Data.GateOrUnused (GateOrUnused(..))
+import MinDepthSN.Data.Gate (KnownNetType)
 
 
 -- | @fixGateOrUnused (GateOrUnused i j k)@ either compares the values on the 
@@ -28,7 +29,7 @@ import MinDepthSN.Data.GateOrUnused (GateOrUnused(..))
 --
 -- See 'minimum' and 'maximum' for the CNF.
 --
-fixGateOrUnused :: GateOrUnused -> [[Lit Value]]
+fixGateOrUnused :: KnownNetType t => GateOrUnused t -> [[Lit Value]]
 fixGateOrUnused (GateOrUnused i j k) =
     minimum [in1, in2] outMin ++ maximum [in1, in2] outMax
   where
