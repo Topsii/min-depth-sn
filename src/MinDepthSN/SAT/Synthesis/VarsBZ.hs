@@ -25,14 +25,14 @@ import MinDepthSN.Data.Gate (Gate, KnownNetType)
 import qualified MinDepthSN.Data.Size as Size
 
 data NetworkSynthesis t
-    = GateOrUnused_ { unGateOrUnused_ :: GateOrUnused t }
-    | Value_ { offset :: Word32, unValue_ :: Value }
+    = GateOrUnused_ (GateOrUnused t)
+    | Value_ Word32 Value
     deriving stock (Generic, Eq, Ord)
     deriving Enum via (FiniteEnumeration (NetworkSynthesis t))
 
 instance KnownNetType t => Dimacs (NetworkSynthesis t) where
     toDIMACS ns = case ns of
-        Value_ o v -> fromIntegral o + toDIMACS (Var (Value_ 0 v :: NetworkSynthesis t))
+        Value_ dimacsOffset val -> fromIntegral dimacsOffset + toDIMACS (Var (Value_ 0 val :: NetworkSynthesis t))
         _          -> toDIMACS (Var ns)
 
 

@@ -43,7 +43,8 @@ instance KnownNetType 'Generalized
 
 -- | @Gate i j k@ creates a variable \(g_{i,j}^k\) representing a
 -- comparator gate where \(i\) and \(j\) are the channels and \(k\) is the layer.
-data Gate (t :: NetworkType) = MkGate { layer :: Layer, channels :: Selection (GateChannelOrdering t) 'NoRepetition Channel }
+data Gate (t :: NetworkType)
+    = MkGate Layer (Selection (GateChannelOrdering t) 'NoRepetition Channel)
     deriving stock (Generic, Eq, Ord, Ix)
     deriving Enum via FiniteEnumeration (Gate t)
     deriving Bounded via Generically (Gate t)

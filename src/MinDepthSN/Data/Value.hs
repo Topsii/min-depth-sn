@@ -18,7 +18,7 @@ import MinDepthSN.Data.Size (Channel, BetweenLayers, firstChannel, lastChannel, 
 
 -- | @Value i k@ creates a variable \(v_i^k\) representing the value on
 -- channel \(i\) between layers \(k\) and \(k+1\).
-data Value = MkValue { betweenLayers :: BetweenLayers, channel :: Channel }
+data Value = MkValue BetweenLayers Channel
     deriving stock (Generic, Eq, Ord, Ix)
     deriving Enum via (FiniteEnumeration Value)
     deriving Bounded via (Generically Value)

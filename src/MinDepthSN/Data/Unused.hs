@@ -16,7 +16,7 @@ import MinDepthSN.Data.Size
 
 -- | @Unused i k@ creates a variable \(unused_i^k\) indicating a
 -- channel \(i\) is not used by any comparator gate in layer \(k\).
-data Unused = MkUnused { layer :: Layer, channel :: Channel }
+data Unused = MkUnused Layer Channel
     deriving stock (Eq, Generic, Ord, Ix)
     deriving Enum via (FiniteEnumeration Unused)
     deriving Bounded via (Generically Unused)
