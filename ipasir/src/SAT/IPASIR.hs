@@ -108,7 +108,7 @@ class Dimacs a where
     --
     -- > fromDIMACS 0 ~> undefined
     -- > negate (fromDIMACS x) == fromDIMACS (-x)
-    fromDIMACS :: CInt -> a
+    -- fromDIMACS :: CInt -> a
 
 
 instance Show a => Show (Var a) where
@@ -124,16 +124,16 @@ instance Show a => Show (Lit a) where
 -- Also ideally make sure we can add 1?
 instance Enum a => Dimacs (Var a) where
     toDIMACS variable = fromIntegral (fromEnum variable) + 1
-    fromDIMACS integer = toEnum (fromIntegral integer - 1)
+    -- fromDIMACS integer = toEnum (fromIntegral integer - 1)
 
 instance Dimacs a => Dimacs (Lit a) where
     toDIMACS = \case
         PosLit variable ->   toDIMACS variable
         NegLit variable -> - toDIMACS variable
-    fromDIMACS integer
-        | integer < 0 = NegLit $ fromDIMACS (- integer)
-        | integer > 0 = PosLit $ fromDIMACS    integer
-        | otherwise = error "fromDIMACS: 0 represents no literal"
+    -- fromDIMACS integer
+    --     | integer < 0 = NegLit $ fromDIMACS (- integer)
+    --     | integer > 0 = PosLit $ fromDIMACS    integer
+    --     | otherwise = error "fromDIMACS: 0 represents no literal"
 
 addLiteral :: Dimacs v => Lit v -> Solver s v ()
 addLiteral = Solver . ipasirAdd . toDIMACS

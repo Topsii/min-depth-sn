@@ -24,13 +24,13 @@ main = print (networkSolution :: Either [Bool] [GateOrUnused 'Standard])
 networkSolution :: KnownNetType t => Either [Bool] [GateOrUnused t]
 networkSolution = runSolver $ do
     --addCNF representativesOfBzIsomorphicEqClasses
-    let initCexCnt = 650
+    let initCexCnt = 0
      --(2^n) `div` 2
-    network <- findNetwork initCexCnt
+    (cxData, network) <- findNetwork initCexCnt
     let maybeCex = findCounterexample network
     case maybeCex of
         Nothing -> error $ "no initial cex: " ++ show network
-        Just cex -> findSortingNetwork (fromInteger initCexCnt) cex
+        Just cex -> findSortingNetwork cxData cex
 
 -- findFirstNetwork :: Integer -> ExceptRT (Maybe [GateOrUnused o]) (Solver s NetworkSynthesis) [Bool]
 -- findFirstNetwork initCexCnt = do
@@ -40,13 +40,13 @@ networkSolution = runSolver $ do
 --         Nothing -> error $ "no initial cex: " ++ show network
 --         Just cex -> findSortingNetwork (fromInteger initCexCnt+1) cex
 
-findNetwork :: KnownNetType t => Integer -> Solver s (NetworkSynthesis t) [GateOrUnused t]
+findNetwork :: KnownNetType t => Integer -> Solver s (NetworkSynthesis t) ((Word32, Word32), [GateOrUnused t])
 findNetwork initCexCnt = do
     let initCexs = genericTake initCexCnt . prioritizeSmallWindows $ inputs
-    let (_, sortsCexs) = mapAccumL (\cIdx cx -> (cIdx+1, sorts cIdx cx)) 0 initCexs
+    let (cxData, sortsCexs) = mapAccumL (\(cIdx, cOffset) cx -> ((cIdx + 1, cOffset + fromIntegral (n * (d+1))), sorts cOffset cx)) (0 :: Word32, 0) initCexs
     r <- solveCNFs $ [usage, maximalFirstLayer] ++ sortsCexs
     if r
-        then trueAssigned [ minBound .. maxBound ]
+        then (,) cxData <$> trueAssigned [ minBound .. maxBound ]
         else error "no network was found initially"
 
 -- | Prioritize counterexample inputs with a small window size.
@@ -74,9 +74,9 @@ trailingOnes = length . takeWhile id . reverse
 --ExceptT Alternative/MonadPlus instance to collect cex for cegis?
 
 -- find a network, that sorts the given input and then look if there is still a counterexample input that is not sorted
-findSortingNetwork :: KnownNetType t => Word32 -> [Bool] -> Solver s (NetworkSynthesis t) (Either [Bool] [GateOrUnused t])
-findSortingNetwork cexIdx cex = do
-    r <- solveCNFs [ sorts cexIdx cex ]
+findSortingNetwork :: KnownNetType t => (Word32, Word32) -> [Bool] -> Solver s (NetworkSynthesis t) (Either [Bool] [GateOrUnused t])
+findSortingNetwork (cexIdx,cexOffset) cex = do
+    r <- solveCNFs [ sorts cexOffset cex ]
     if r then do
         network <- trueAssigned [ minBound .. maxBound ]
         -- vals <- assignments [Value_ cexIdx minBound .. Value_ cexIdx maxBound]
@@ -87,7 +87,7 @@ findSortingNetwork cexIdx cex = do
             $ trace (show network ++ "\n" ++ show positionValues ++ "\n")
             -}
             network of
-                Just cex2 -> trace (show cexIdx ++ ": " ++ (concatMap (show . fromEnum) cex2)) $ findSortingNetwork (cexIdx + 1) cex2
+                Just cex2 -> trace (show cexIdx ++ ": " ++ (concatMap (show . fromEnum) cex2)) $ findSortingNetwork (cexIdx + 1, cexOffset + fromIntegral (n * (d+1))) cex2
                 Nothing -> return $ Right network
     else return $ Left cex
 

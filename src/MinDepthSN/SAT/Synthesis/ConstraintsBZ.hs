@@ -122,11 +122,12 @@ maximalFirstLayer
 -- 'MinDepthSN.SAT.Constraints.fixGateOrUnused' for the CNF.
 --
 update :: forall t. KnownNetType t => Word32 -> [[Lit (NetworkSynthesis t)]]
-update cexIdx = concat
+update cexOffset = concat
     [-- TODO: replace (map . map . fmap) by fmap for a CNF datatype like: data CNF a = CNF [[Lit a]] deriving Functor
-        gateOrUnusedLit i j k `litImplies` (map . map . fmap) (Value_ cexIdx) (fixGateOrUnused (GateOrUnused i j k :: GateOrUnused t))
+        gateOrUnusedLit i j k `litImplies` (map . map . fmap) (Value_ cexOffset) (fixGateOrUnused (GateOrUnused i j k :: GateOrUnused t))
     | GateOrUnused i j k <- [ minBound .. maxBound ] :: [GateOrUnused t]
     ]
+
 
 -- -- improved update constraints that enable more propagations by Thorsten Ehlers and Mike Müller
 -- sortsEM :: forall t. KnownNetType t => Word32 -> [Bool] -> [[Lit (NetworkSynthesis t)]]
@@ -159,14 +160,14 @@ update cexIdx = concat
 --         outMax = valueLit j afterK
 
 sorts :: forall t. KnownNetType t => Word32 -> [Bool] -> [[Lit (NetworkSynthesis t)]]
-sorts cexIdx counterexample = concat
+sorts cexOffset counterexample = concat
     [ zipWith fixValue counterexample inputValues
-    , update cexIdx
+    , update cexOffset
     , zipWith fixValue (sort counterexample) outputValues
     ]
   where
     fixValue :: Bool -> Value -> [Lit (NetworkSynthesis t)]
-    fixValue polarity val = [polarize polarity (cexIdx, val)]
+    fixValue polarity val = [polarize polarity (cexOffset, val)]
 
 -- for generalized networks
 -- behavior on unused not implemented

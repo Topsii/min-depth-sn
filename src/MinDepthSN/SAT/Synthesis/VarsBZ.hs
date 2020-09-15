@@ -12,7 +12,7 @@ module MinDepthSN.SAT.Synthesis.VarsBZ
     , NetworkSynthesis(..)
     ) where
 
-import SAT.IPASIR (AsVar(..), Var(..), Dimacs)
+import SAT.IPASIR (AsVar(..), Var(..), Dimacs(..))
 
 import Generic.Data
 import Data.Word (Word32)
@@ -26,10 +26,15 @@ import qualified MinDepthSN.Data.Size as Size
 
 data NetworkSynthesis t
     = GateOrUnused_ { unGateOrUnused_ :: GateOrUnused t }
-    | Value_ { counterExIdx :: Word32, unValue_ :: Value }
+    | Value_ { offset :: Word32, unValue_ :: Value }
     deriving stock (Generic, Eq, Ord)
     deriving Enum via (FiniteEnumeration (NetworkSynthesis t))
-    deriving Dimacs via (Var (NetworkSynthesis t))
+
+instance KnownNetType t => Dimacs (NetworkSynthesis t) where
+    toDIMACS ns = case ns of
+        Value_ o v -> fromIntegral o + toDIMACS (Var (Value_ 0 v :: NetworkSynthesis t))
+        _          -> toDIMACS (Var ns)
+
 
 instance KnownNetType t => Show (NetworkSynthesis t) where
     showsPrec p ns = showParen (p >= 11) $ case ns of
