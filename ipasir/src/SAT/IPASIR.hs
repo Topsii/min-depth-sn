@@ -115,9 +115,9 @@ instance Show a => Show (Var a) where
     show (Var x) = 'v' : show x
 
 instance Show a => Show (Lit a) where
-    show = \case
-        PosLit variable -> '+' : show variable
-        NegLit variable -> '-' : show variable
+    showsPrec p = showParen (p >= 11) . \case
+        PosLit variable -> showChar '+' . showsPrec 11 variable
+        NegLit variable -> showChar '-' . showsPrec 11 variable
 
 -- ideally use toIntegerSized from Data.Bits here to ensure the conversion
 -- between CInt and Int works as intended?

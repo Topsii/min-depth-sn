@@ -14,7 +14,8 @@ newtype Counterexample = Counterexample Value
     deriving Dimacs via (Var Counterexample)
 
 instance Show Counterexample where
-    show (Counterexample value) = "CEx (" ++ show value ++ ")"
+    showsPrec p (Counterexample value) = showParen (p >= 11) $
+        showString "Cex " . showsPrec 11 value 
 
 instance AsVar Counterexample Value where
     var = Counterexample

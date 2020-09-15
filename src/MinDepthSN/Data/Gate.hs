@@ -55,7 +55,7 @@ pattern Gate i j k = MkGate k (Selection i j)
 instance KnownNetType t => Show (Gate t) where
     showsPrec p (Gate i j k) = showParen (p >= 11) $
         showsTypeRep (typeRep (Proxy :: Proxy t)) .
-        showString "Gate" . showChar ' ' .
+        showString "Gate " .
         showsPrec 11 i . showChar ' ' .
         showsPrec 11 j . showChar ' ' . 
         showsPrec 11 k

@@ -32,9 +32,9 @@ data NetworkSynthesis t
     deriving Dimacs via (Var (NetworkSynthesis t))
 
 instance KnownNetType t => Show (NetworkSynthesis t) where
-    show ns = case ns of
-        GateOrUnused_ gu -> show gu
-        Value_ cexIdx val -> show cexIdx ++ " " ++ show val
+    showsPrec p ns = showParen (p >= 11) $ case ns of
+        GateOrUnused_ gu  -> showString "GateOrUnused_ " . showsPrec 11 gu
+        Value_ cexIdx val -> showString "Value_ " . showsPrec 11 cexIdx . showChar ' ' . showsPrec 11 val
 
 instance KnownNetType t => AsVar (NetworkSynthesis t) Unused where
     var = GateOrUnused_ . Unused_

@@ -279,15 +279,15 @@ newtype Level = Level (Finite (D+2))
 
 
 instance (Show Channel) where
-    show (Channel i) = show $ toInteger i
+    showsPrec _p (Channel i) = showsPrec 11 (toInteger i)
 instance (Show Layer) where
-    show (Layer k) = show $ toInteger k
+    showsPrec _p (Layer k) = showsPrec 11 (toInteger k)
 instance (Show BetweenLayers) where
-    show (BetweenLayers k) = show $ toInteger k
+    showsPrec _p (BetweenLayers k) = showsPrec 11 (toInteger k)
 -- instance (Show GateInLayer) where
---     show (GateInLayer a) = show $ toInteger a
+--     showsPrec p (GateInLayer a) = showsPrec 11 (toInteger a)
 instance (Show UsedChannel) where
-    show (UsedChannel i) = show $ toInteger i
+    showsPrec _p (UsedChannel i) = showsPrec 11 (toInteger i)
 
 
 instance KnownNat n => Ix (Finite n) where

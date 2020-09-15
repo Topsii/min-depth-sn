@@ -28,7 +28,8 @@ pattern Value :: Channel -> BetweenLayers -> Value
 pattern Value i k = MkValue k i
 
 instance Show Value where
-    show (Value i k) = "Value " ++ show i ++ " " ++ show k
+    showsPrec p (Value i k) = showParen (p >= 11) $
+        showString "Value " . showsPrec 11 i . showChar ' ' . showsPrec 11 k 
 
 inputValues :: [Value]
 inputValues =

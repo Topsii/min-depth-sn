@@ -54,8 +54,8 @@ data GateOrUnused (t :: NetworkType) =
     deriving Bounded via (Generically (GateOrUnused t))
 
 instance KnownNetType t => Show (GateOrUnused t) where
-    showsPrec p (Gate_ g)   = showParen (p >= 11) $ showString "Gate_"   . showChar ' ' . showsPrec 11 g 
-    showsPrec p (Unused_ u) = showParen (p >= 11) $ showString "Unused_" . showChar ' ' . showsPrec 11 u
+    showsPrec p (Gate_ g)   = showParen (p >= 11) $ showString "Gate_ "   . showsPrec 11 g 
+    showsPrec p (Unused_ u) = showParen (p >= 11) $ showString "Unused_ " . showsPrec 11 u
 
 {-# COMPLETE Gate_, Unused_ #-}
 {-# COMPLETE GateOrUnused   #-}

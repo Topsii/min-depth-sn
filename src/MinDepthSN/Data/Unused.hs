@@ -26,7 +26,8 @@ pattern Unused :: Channel -> Layer -> Unused
 pattern Unused i k = MkUnused k i
 
 instance Show Unused where
-    show (Unused i k) = "Unused " ++ show i ++ " " ++ show k
+    showsPrec p (Unused i k) = showParen (p >= 11) $
+        showString "Unused " . showsPrec 11 i . showChar ' ' . showsPrec 11 k 
 
 -- | Literal of 'Unused' with positive polarity.
 unusedLit :: AsVar v Unused => Channel -> Layer -> Lit v
