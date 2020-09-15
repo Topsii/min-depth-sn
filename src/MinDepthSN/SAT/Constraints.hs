@@ -7,7 +7,7 @@ module MinDepthSN.SAT.Constraints where
 
 import Prelude hiding (negate, maximum, minimum)
 import Data.List (nub)
-import SAT.IPASIR (Var(..), Lit(..), negate)
+import SAT.IPASIR (Lit(..), negate)
 import MinDepthSN.Data.Combinatorics2.CombinationNoRepetition (zipWithSuccs)
 import MinDepthSN.Data.Size (Channel, BetweenLayers, before, after)
 import MinDepthSN.Data.Value (Value(..))
@@ -43,7 +43,7 @@ fixGateOrUnused (GateOrUnused i j k) =
     outMax = valueLit j afterK
 
 valueLit :: Channel -> BetweenLayers -> Lit Value
-valueLit i k = Positive $ Var $ Value i k
+valueLit i k = PosLit $ Value i k
 
 -- | @minimum @\(l_{\min}\)@ [@\(l_0\)@,@\(l_1\)@,@\(\dots\)@,@\(l_k\)@]@
 -- ensures that in a satisfying assignment the value of literal \(l_{\min}\) is

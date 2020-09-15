@@ -25,7 +25,6 @@ module SAT.IPASIR
     , falseAssigned
     -- * Variables
     , AsVar(..)
-    , var
     , Var(..)
     -- * Literals
     , lit
@@ -63,28 +62,25 @@ runSolver solver = IPASIR.runSolver (unSolver solver)
 -- this will force the solver to allocate all variables?, even if they are not added later.
 -- It will also not change the result.
 -- runSolver :: (Enum v, Bounded v) => (forall s. Solver s v a) -> a
--- runSolver solver = IPASIR.runSolver (unSolver (addClause [Positive $ Var maxBound, Negative $ Var maxBound] >> solver))
+-- runSolver solver = IPASIR.runSolver (unSolver (addClause [PosLit $ Var maxBound, NegLit $ Var maxBound] >> solver))
 
 newtype Var a = Var { unVar :: a }
     deriving newtype (Eq, Ord, Bounded, Enum)
     deriving stock (Functor)
 
-data Lit a = Positive (Var a) | Negative (Var a)
+data Lit a = PosLit a | NegLit a
     deriving stock (Functor, Eq, Ord)
 
 negate :: Lit v -> Lit v
 negate = \case
-    Positive variable -> Negative variable
-    Negative variable -> Positive variable
+    PosLit variable -> NegLit variable
+    NegLit variable -> PosLit variable
 
-class Enum v => AsVar v a where
-    asVar :: a -> v
+class Dimacs v => AsVar v a where
+    var :: a -> v
 
 lit :: AsVar v a => a -> Lit v
-lit = Positive . var
-
-var :: AsVar v a => a -> Var v
-var = Var . asVar
+lit = PosLit . var
 
 -- perhaps a bad name, since another use of the term polarity is:
 -- The polarity determines wether a variable is first 
@@ -94,8 +90,8 @@ var = Var . asVar
 -- (+) :: a -> Lit v
 polarize :: AsVar v a => Bool -> a -> Lit v
 polarize = \case
-    True  -> Positive . var
-    False -> Negative . var
+    True  -> PosLit . var
+    False -> NegLit . var
 
 -- | @fromDIMACS 0@ is undefined, otherwise it holds:
 --
@@ -120,8 +116,8 @@ instance Show a => Show (Var a) where
 
 instance Show a => Show (Lit a) where
     show = \case
-        Positive variable -> '+' : show variable
-        Negative variable -> '-' : show variable
+        PosLit variable -> '+' : show variable
+        NegLit variable -> '-' : show variable
 
 -- ideally use toIntegerSized from Data.Bits here to ensure the conversion
 -- between CInt and Int works as intended?
@@ -130,39 +126,39 @@ instance Enum a => Dimacs (Var a) where
     toDIMACS variable = fromIntegral (fromEnum variable) + 1
     fromDIMACS integer = toEnum (fromIntegral integer - 1)
 
-instance Enum a => Dimacs (Lit a) where
+instance Dimacs a => Dimacs (Lit a) where
     toDIMACS = \case
-        Positive variable ->   toDIMACS variable
-        Negative variable -> - toDIMACS variable
+        PosLit variable ->   toDIMACS variable
+        NegLit variable -> - toDIMACS variable
     fromDIMACS integer
-        | integer < 0 = Negative $ fromDIMACS (- integer)
-        | integer > 0 = Positive $ fromDIMACS    integer
+        | integer < 0 = NegLit $ fromDIMACS (- integer)
+        | integer > 0 = PosLit $ fromDIMACS    integer
         | otherwise = error "fromDIMACS: 0 represents no literal"
 
-addLiteral :: Enum v => Lit v -> Solver s v ()
+addLiteral :: Dimacs v => Lit v -> Solver s v ()
 addLiteral = Solver . ipasirAdd . toDIMACS
 
-finalizeClause :: Enum v => Solver s v ()
+finalizeClause :: Dimacs v => Solver s v ()
 finalizeClause = Solver $ ipasirAdd 0
 
-addClause :: Enum v => [Lit v] -> Solver s v ()
+addClause :: Dimacs v => [Lit v] -> Solver s v ()
 addClause literals = mapM_ addLiteral literals >> finalizeClause
 
-addClauses :: Enum v => [[Lit v]] -> Solver s v ()
+addClauses :: Dimacs v => [[Lit v]] -> Solver s v ()
 addClauses = mapM_ addClause
 
-solve :: Enum v => Solver s v Bool
+solve :: Dimacs v => Solver s v Bool
 solve = Solver ipasirSolve
 
-solveCNF :: Enum v => [[Lit v]] -> Solver s v Bool
+solveCNF :: Dimacs v => [[Lit v]] -> Solver s v Bool
 solveCNF clauses = addClauses clauses >> solve
 
 -- | Solves a conjunction of cnf formulas.
-solveCNFs :: Enum v => [[[Lit v]]] -> Solver s v Bool
+solveCNFs :: Dimacs v => [[[Lit v]]] -> Solver s v Bool
 solveCNFs cnfs =  mapM_ addClauses cnfs >> solve
 
 isTrueAssigned :: forall s v a. AsVar v a => a -> Solver s v Bool
-isTrueAssigned = Solver . ipasirVal . toDIMACS . (var :: a -> Var v)
+isTrueAssigned = Solver . ipasirVal . toDIMACS . (var :: a -> v)
 
 isFalseAssigned :: AsVar v a =>  a -> Solver s v Bool
 isFalseAssigned literal = not <$> isTrueAssigned literal

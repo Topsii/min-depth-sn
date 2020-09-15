@@ -7,7 +7,7 @@ module MinDepthSN.SAT.Counterexample.Constraints where
 import Prelude hiding (negate)
 import Data.List (inits, tails)
 import Data.Enum (succeeding)
-import SAT.IPASIR (Var(..), Lit(..), negate)
+import SAT.IPASIR (Lit(..), negate)
 import MinDepthSN.SAT.Constraints (fixGateOrUnused)
 import MinDepthSN.SAT.Counterexample.Variables (Counterexample(..))
 import MinDepthSN.Data.Size (channels, afterLastLayer)
@@ -57,8 +57,8 @@ unsortedOutput :: [[Lit Counterexample]]
 unsortedOutput = zipWith (++) (inits outputOnes) (tails outputZeros)
   where
     outputZeros, outputOnes ::  [Lit Counterexample]
-    outputZeros = map (Negative . Var . Counterexample) outputValues
-    outputOnes  = map (Positive . Var . Counterexample) outputValues
+    outputZeros = map (NegLit . Counterexample) outputValues
+    outputOnes  = map (PosLit . Counterexample) outputValues
 
 -- | See 'MinDepthSN.SAT.Constraints.fixGateOrUnused'.
 fixNetwork :: KnownNetType t => [GateOrUnused t] -> [[Lit Counterexample]]

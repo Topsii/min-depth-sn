@@ -24,7 +24,7 @@ main = print (networkSolution :: Either [Bool] [GateOrUnused 'Standard])
 networkSolution :: KnownNetType t => Either [Bool] [GateOrUnused t]
 networkSolution = runSolver $ do
     --addCNF representativesOfBzIsomorphicEqClasses
-    let initCexCnt = 0
+    let initCexCnt = 650
      --(2^n) `div` 2
     network <- findNetwork initCexCnt
     let maybeCex = findCounterexample network
