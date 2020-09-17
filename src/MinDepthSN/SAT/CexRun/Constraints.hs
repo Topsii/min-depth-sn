@@ -2,14 +2,14 @@
 
 {-# LANGUAGE FlexibleContexts #-}
 
-module MinDepthSN.SAT.Counterexample.Constraints where
+module MinDepthSN.SAT.CexRun.Constraints where
 
 import Prelude hiding (negate)
 import Data.List (inits, tails)
 import Data.Enum (succeeding)
 import SAT.IPASIR (Lit(..), negate)
 import MinDepthSN.SAT.Constraints (fixGateOrUnused)
-import MinDepthSN.SAT.Counterexample.Variables (Counterexample(..))
+import MinDepthSN.SAT.CexRun.Variables (CexRun(..))
 import MinDepthSN.Data.Size (channels, afterLastLayer)
 import MinDepthSN.Data.Value (outputValues, valueLit)
 import MinDepthSN.Data.GateOrUnused (GateOrUnused)
@@ -30,7 +30,7 @@ import MinDepthSN.Data.Gate (KnownNetType)
 -- \bigwedge_{0 \le i < j < n}
 --      \left( \neg v_i^d \vee v_j^d \right)
 -- \]
-sortedOutput :: [[Lit Counterexample]]
+sortedOutput :: [[Lit CexRun]]
 sortedOutput =
     [
         [ - valueLit i afterLastLayer, valueLit j afterLastLayer ]
@@ -53,14 +53,14 @@ sortedOutput =
 --             \neg v_j^d
 --     \right)
 -- \]
-unsortedOutput :: [[Lit Counterexample]]
+unsortedOutput :: [[Lit CexRun]]
 unsortedOutput = zipWith (++) (inits outputOnes) (tails outputZeros)
   where
-    outputZeros, outputOnes ::  [Lit Counterexample]
-    outputZeros = map (NegLit . Counterexample) outputValues
-    outputOnes  = map (PosLit . Counterexample) outputValues
+    outputZeros, outputOnes ::  [Lit CexRun]
+    outputZeros = map (NegLit . CexRun) outputValues
+    outputOnes  = map (PosLit . CexRun) outputValues
 
 -- | See 'MinDepthSN.SAT.Constraints.fixGateOrUnused'.
-fixNetwork :: KnownNetType t => [GateOrUnused t] -> [[Lit Counterexample]]
+fixNetwork :: KnownNetType t => [GateOrUnused t] -> [[Lit CexRun]]
 -- TODO: replace (map . map . fmap) by fmap for a CNF datatype like: data CNF a = CNF [[Lit a]] deriving Functor
-fixNetwork = concatMap ((map . map . fmap) Counterexample . fixGateOrUnused)
+fixNetwork = concatMap ((map . map . fmap) CexRun . fixGateOrUnused)

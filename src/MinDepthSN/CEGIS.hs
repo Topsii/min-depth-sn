@@ -8,8 +8,8 @@ import Data.Bits
 import SAT.IPASIR
 import MinDepthSN.SAT.Synthesis.ConstraintsBZ
 import MinDepthSN.SAT.Synthesis.VarsBZ
-import MinDepthSN.SAT.Counterexample.Constraints
--- import MinDepthSN.SAT.Counterexample.Variables
+import MinDepthSN.SAT.CexRun.Constraints
+-- import MinDepthSN.SAT.CexRun.Variables
 -- import MinDepthSN.SAT.Synthesis.ConstraintsHaslop
 import MinDepthSN.Data.GateOrUnused
 import MinDepthSN.Data.Gate (KnownNetType, NetworkType(..))
@@ -80,7 +80,7 @@ findSortingNetwork (cexIdx,cexOffset) cex = do
     if r then do
         network <- trueAssigned [ minBound .. maxBound ]
         -- vals <- assignments [Value_ cexIdx minBound .. Value_ cexIdx maxBound]
-        -- let positions = [ minBound .. maxBound ] :: [Counterexample]
+        -- let positions = [ minBound .. maxBound ] :: [CexRun]
         -- let positionValues = zip vals positions
         case findCounterexample
             {-
@@ -95,7 +95,7 @@ findCounterexample :: KnownNetType t => [GateOrUnused t] -> Maybe [Bool] -- unne
 findCounterexample network = runSolver $ do
     s <- solveCNFs [fixNetwork network, unsortedOutput]
     if s then do
-        -- let positions = [ minBound .. maxBound ] :: [Counterexample]
+        -- let positions = [ minBound .. maxBound ] :: [CexRun]
         -- vals <- assignments positions
         -- let positionValues = zip vals positions
         counterexampleInput <- assignments inputValues
