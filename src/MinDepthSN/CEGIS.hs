@@ -1,16 +1,17 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 
 module MinDepthSN.CEGIS where
 import Debug.Trace
 import Data.List
 import Data.Bits
+import Control.Monad (when)
 import SAT.IPASIR
 import MinDepthSN.SAT.Synthesis.ConstraintsBZ
 import MinDepthSN.SAT.Synthesis.VarsBZ
 import MinDepthSN.SAT.CexRun.Constraints
 -- import MinDepthSN.SAT.CexRun.Variables
--- import MinDepthSN.SAT.Synthesis.ConstraintsHaslop
 import MinDepthSN.Data.GateOrUnused
 import MinDepthSN.Data.Gate (KnownNetType, NetworkType(..))
 import MinDepthSN.Data.Size
@@ -21,33 +22,26 @@ main :: IO ()
 -- main = print $ runSolver (addClauses minimalRepresentative >> solve)
 main = print (networkSolution :: Either [Bool] [GateOrUnused 'Standard])
 
-networkSolution :: KnownNetType t => Either [Bool] [GateOrUnused t]
+networkSolution :: forall t. KnownNetType t => Either [Bool] [GateOrUnused t]
 networkSolution = runSolver $ do
-    --addCNF representativesOfBzIsomorphicEqClasses
+
+    -- add mandatory initial constraints
+    addClauses usage
+    addClauses maximalFirstLayer
+    --addClauses representativesOfBzIsomorphicEqClasses
+
+    -- possibly add initial counterexample constraints
     let initCexCnt = 0
-     --(2^n) `div` 2
-    (cxData, network) <- findNetwork initCexCnt
-    let maybeCex = findCounterexample network
-    case maybeCex of
-        Nothing -> error $ "no initial cex: " ++ show network
-        Just cex -> findSortingNetwork cxData cex
+    let initCexs = take initCexCnt . prioritizeSmallWindows $ inputs
+    let (cxData, sortsCexs) = mapAccumR (\(cIdx, cOffset) cx -> ((cIdx + 1, cOffset + fromIntegral (n * (d+1))), sorts cOffset cx)) (0 :: Word32, 0) initCexs
+    addClauses (concat sortsCexs)
 
--- findFirstNetwork :: Integer -> ExceptRT (Maybe [GateOrUnused o]) (Solver s NetworkSynthesis) [Bool]
--- findFirstNetwork initCexCnt = do
---     network <- findNetwork initCexCnt
---     let maybeCex = findCounterexample network
---     case maybeCex of
---         Nothing -> error $ "no initial cex: " ++ show network
---         Just cex -> findSortingNetwork (fromInteger initCexCnt+1) cex
-
-findNetwork :: KnownNetType t => Integer -> Solver s (NetworkSynthesis t) ((Word32, Word32), [GateOrUnused t])
-findNetwork initCexCnt = do
-    let initCexs = genericTake initCexCnt . prioritizeSmallWindows $ inputs
-    let (cxData, sortsCexs) = mapAccumL (\(cIdx, cOffset) cx -> ((cIdx + 1, cOffset + fromIntegral (n * (d+1))), sorts cOffset cx)) (0 :: Word32, 0) initCexs
-    r <- solveCNFs $ [usage, maximalFirstLayer] ++ sortsCexs
-    if r
-        then (,) cxData <$> trueAssigned [ minBound .. maxBound ]
-        else error "no network was found initially"
+    -- start cegis
+    -- actually synthesizeSortingNetwork should be called here but we lack a cex if initCexCnt = 0
+    sat <- solve
+    when (not sat) $ error "no network was found initially" -- instead return previous cex i.e. an element from initCexs?
+    network <- trueAssigned [ minBound .. maxBound :: GateOrUnused t ]
+    validateSortingNetwork cxData network
 
 -- | Prioritize counterexample inputs with a small window size.
 -- Disregard sorted inputs as they do not function as counterexamples.
@@ -71,37 +65,36 @@ leadingZeroes = length . takeWhile not
 trailingOnes :: [Bool] -> Int
 trailingOnes = length . takeWhile id . reverse
 
---ExceptT Alternative/MonadPlus instance to collect cex for cegis?
-
--- find a network, that sorts the given input and then look if there is still a counterexample input that is not sorted
-findSortingNetwork :: KnownNetType t => (Word32, Word32) -> [Bool] -> Solver s (NetworkSynthesis t) (Either [Bool] [GateOrUnused t])
-findSortingNetwork (cexIdx,cexOffset) cex = do
-    r <- solveCNFs [ sorts cexOffset cex ]
+-- synthesize a network, that also sorts the given input
+-- if synthesization succeeds: validate that this new network is a sorting network 
+synthesizeSortingNetwork :: KnownNetType t => (Word32, Word32) -> [Bool] -> Solver s (NetworkSynthesis t) (Either [Bool] [GateOrUnused t])
+synthesizeSortingNetwork (cexIdx, cexOffset) cexInput = do
+    r <- solveCNFs [ sorts cexOffset cexInput ]
     if r then do
         network <- trueAssigned [ minBound .. maxBound ]
-        -- vals <- assignments [Value_ cexIdx minBound .. Value_ cexIdx maxBound]
-        -- let positions = [ minBound .. maxBound ] :: [CexRun]
-        -- let positionValues = zip vals positions
-        case findCounterexample
-            {-
-            $ trace (show network ++ "\n" ++ show positionValues ++ "\n")
-            -}
-            network of
-                Just cex2 -> trace (show cexIdx ++ ": " ++ (concatMap (show . fromEnum) cex2)) $ findSortingNetwork (cexIdx + 1, cexOffset + fromIntegral (n * (d+1))) cex2
-                Nothing -> return $ Right network
-    else return $ Left cex
+        validateSortingNetwork (cexIdx, cexOffset) network
+    else pure $ Left cexInput
 
-findCounterexample :: KnownNetType t => [GateOrUnused t] -> Maybe [Bool] -- unnecessary KnownNetType constraint?
-findCounterexample network = runSolver $ do
+-- validate that a network is a sorting network by confirming the absence of counterexample runs
+-- if validation fails: synthesize a new network that also sorts the counterexample
+validateSortingNetwork :: KnownNetType t => (Word32, Word32) -> [GateOrUnused t] -> Solver s (NetworkSynthesis t) (Either [Bool] [GateOrUnused t])
+validateSortingNetwork (cexIdx,cexOffset) network = case findCounterexampleRun network of
+    Nothing -> pure $ Right network
+    Just cexInput -> trace (show cexIdx ++ ": " ++ (concatMap (show . fromEnum) cexInput)) $
+        synthesizeSortingNetwork (cexIdx + 1, cexOffset + fromIntegral (n * (d+1))) cexInput
+
+-- find a counterexample run where some input is not sorted
+findCounterexampleRun :: KnownNetType t => [GateOrUnused t] -> Maybe [Bool] -- unnecessary KnownNetType constraint?
+findCounterexampleRun network = runSolver $ do
     s <- solveCNFs [fixNetwork network, unsortedOutput]
     if s then do
         -- let positions = [ minBound .. maxBound ] :: [CexRun]
         -- vals <- assignments positions
         -- let positionValues = zip vals positions
         counterexampleInput <- assignments inputValues
-        return $ Just
+        pure $ Just
             {-
-            $ trace (show positionValues)
+            $ trace (show network ++ "\n" ++ show positionValues ++ "\n")
             -}
             counterexampleInput
-    else return Nothing
+    else pure Nothing
