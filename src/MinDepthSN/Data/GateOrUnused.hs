@@ -9,8 +9,6 @@
 
 {-# language FlexibleContexts #-}
 
-{-# language ImportQualifiedPost #-}
-
 module MinDepthSN.Data.GateOrUnused
     ( GateOrUnused
         ( GateOrUnused
@@ -24,10 +22,9 @@ import Data.Ix
 import Generic.Data
 import SAT.IPASIR (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size (Channel, Layer)
-import MinDepthSN.Data.Gate (Gate(..), KnownNetType, GateChannelPairOrder, NetworkType)
+import MinDepthSN.Data.Gate (Gate(..), KnownNetType, AreGateChannelsOrdered, NetworkType)
 import MinDepthSN.Data.Unused (Unused(..))
-import Data.Pair (Pair(Pair))
-import Data.Pair qualified as Pair
+import Data.Pair
 
 -- | A variable \(gu_{i,j}^k\) is either a comparator \(g\)ate variable or an 
 -- \(u\)nused variable.
@@ -50,7 +47,7 @@ import Data.Pair qualified as Pair
 -- variables. For any occurrence of \(gu_{i,j}^k\) in formulas or clauses, its 
 -- definition is passed to the solver instead.
 data GateOrUnused (t :: NetworkType) =
-    MkGateOrUnused Layer (Pair (GateChannelPairOrder t) 'Pair.WithDuplicates Channel)
+    MkGateOrUnused Layer (Pair (AreGateChannelsOrdered t) 'WithDuplicates Channel)
     deriving stock (Generic, Eq, Ord, Ix)
     deriving Enum via (FiniteEnumeration (GateOrUnused t))
     deriving Bounded via (Generically (GateOrUnused t))

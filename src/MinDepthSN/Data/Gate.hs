@@ -8,15 +8,12 @@
 {-# language DataKinds #-}
 {-# language TypeFamilies #-}
 {-# language ScopedTypeVariables #-}
-{-# language ImportQualifiedPost #-}
-
-
 
 module MinDepthSN.Data.Gate
     ( Gate(Gate)
     , gateLit
     , KnownNetType
-    , GateChannelPairOrder
+    , AreGateChannelsOrdered
     , NetworkType(..)
     ) where
 
@@ -26,18 +23,17 @@ import Data.Typeable
 import Generic.Data
 import SAT.IPASIR (AsVar(..), Lit, lit)
 import MinDepthSN.Data.Size (Channel, Layer)
-import Data.Pair (Pair(Pair))
-import Data.Pair qualified as Pair
+import Data.Pair
 
 data NetworkType = Standard | Generalized
     deriving stock (Eq, Show)
 
-type family GateChannelPairOrder (t :: NetworkType) :: Pair.Order where
-    GateChannelPairOrder 'Standard    = 'Pair.Unordered
-    GateChannelPairOrder 'Generalized = 'Pair.Ordered
+type family AreGateChannelsOrdered (t :: NetworkType) :: Order where
+    AreGateChannelsOrdered 'Standard    = 'Unordered
+    AreGateChannelsOrdered 'Generalized = 'Ordered
 
 class ( Typeable t
-      , Typeable (GateChannelPairOrder t)
+      , Typeable (AreGateChannelsOrdered t)
       ) => KnownNetType (t :: NetworkType) where
 
 instance KnownNetType 'Standard
@@ -46,7 +42,7 @@ instance KnownNetType 'Generalized
 -- | @Gate i j k@ creates a variable \(g_{i,j}^k\) representing a
 -- comparator gate where \(i\) and \(j\) are the channels and \(k\) is the layer.
 data Gate (t :: NetworkType)
-    = MkGate Layer (Pair (GateChannelPairOrder t) 'Pair.NoDuplicates Channel)
+    = MkGate Layer (Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel)
     deriving stock (Generic, Eq, Ord, Ix)
     deriving Enum via FiniteEnumeration (Gate t)
     deriving Bounded via Generically (Gate t)
