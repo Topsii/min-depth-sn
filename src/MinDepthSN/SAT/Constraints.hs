@@ -9,10 +9,11 @@ import Prelude hiding (negate, maximum, minimum)
 import Data.List (nub)
 import Data.Pair.UnorderedNoDuplicates (zipWithSuccs)
 import SAT.IPASIR (Lit(..), negate)
-import MinDepthSN.Data.Size (Channel, BetweenLayers, before, after)
+import MinDepthSN.Data.Size (Layer, Channel, BetweenLayers, before, after)
 import MinDepthSN.Data.Value (Value(..))
 import MinDepthSN.Data.GateOrUnused (GateOrUnused(..))
-import MinDepthSN.Data.Gate (KnownNetType)
+import MinDepthSN.Data.Gate (Gate(..), KnownNetType)
+import MinDepthSN.Data.Unused (Unused(..))
 
 
 -- | @fixGateOrUnused (GateOrUnused i j k)@ either compares the values on the 
@@ -21,65 +22,76 @@ import MinDepthSN.Data.Gate (KnownNetType)
 --
 -- For the definition of \(gu\) see 'MinDepthSN.Data.GateOrUnused.GateOrUnused'.
 --
+-- For gates between channels \(i\) and \(j\) in layer \(k\) we have:
 -- \[
 -- \left( v_i^{k+1} \leftrightarrow \left( v_i^k \wedge v_j^k \right) \right)
 -- \wedge \\
 -- \left( v_j^{k+1} \leftrightarrow \left( v_i^k \vee v_j^k \right) \right) \\
 -- \]
 --
--- See 'minimum' and 'maximum' for the CNF.
+-- For a channel \(i\) in layer \(k\) that is not used by any comparator we
+-- have:
+-- \[
+-- v_i^{k+1} \leftrightarrow v_i^k
+-- \]
+-- See 'iff', 'iffDisjunctionOf' and 'iffConjunctionOf' for the CNF.
 --
 fixGateOrUnused :: KnownNetType t => GateOrUnused t -> [[Lit Value]]
-fixGateOrUnused (GateOrUnused i j k) =
-    minimum [in1, in2] outMin ++ maximum [in1, in2] outMax
+fixGateOrUnused gu = case gu of
+    Gate_   (Gate i j k) -> outp i k `iffConjunctionOf` [inp i k, inp j k]
+                         ++ outp j k `iffDisjunctionOf` [inp i k, inp j k]
+    Unused_ (Unused i k) -> outp i k `iff`               inp i k
   where
-    beforeK, afterK :: BetweenLayers
-    beforeK = before k
-    afterK = after k
-    in1, in2, outMin, outMax :: Lit Value
-    in1 = valueLit i beforeK
-    in2 = valueLit j beforeK
-    outMin = valueLit i afterK
-    outMax = valueLit j afterK
+    inp, outp :: Channel -> Layer -> Lit Value
+    inp  i k = valueLit i (before k)
+    outp i k = valueLit i (after  k)
 
 valueLit :: Channel -> BetweenLayers -> Lit Value
 valueLit i k = PosLit $ Value i k
 
--- | @minimum @\(l_{\min}\)@ [@\(l_0\)@,@\(l_1\)@,@\(\dots\)@,@\(l_k\)@]@
--- ensures that in a satisfying assignment the value of literal \(l_{\min}\) is
--- the minimum of the values of all the literals \(l_0,l_1\) up to \(l_k\).
+-- | \(l_{c}\)@ \`iffConjunctionOf\` [@\(l_0\)@,@\(l_1\)@,@\(\dots\)@,@\(l_k\)@]@
+-- ensures that in a satisfying assignment the value of literal \(l_{c}\) is
+-- the conjunction the values of all the literals \(l_0,l_1,\dots\) up to \(l_k\).
 --
 -- \[
 -- \begin{aligned}
--- \mathtt{minimum}\ l_{\min}\ \{l_0, l_1, \dots, l_k\} ={}
---  & \left(  l_{\min} \vee \neg l_0 \vee l_1 \vee \dots \vee \neg l_k \right)\\
---  & \wedge \left( \neg l_{\min} \vee l_0 \right)\\
---  & \wedge \left( \neg l_{\min} \vee l_1 \right)\\
+-- \mathtt{iffConjunctionOf}\ l_{c}\ \{l_0, l_1, \dots, l_k\} ={}
+--  & l_c \leftrightarrow \bigwedge_{i \in 0,\dots,k} l_i\\ ={}
+--  & \left(  l_{c} \vee \neg l_0 \vee \neg l_1 \vee \dots \vee \neg l_k \right)\\
+--  & \wedge \left( \neg l_{c} \vee l_0 \right)\\
+--  & \wedge \left( \neg l_{c} \vee l_1 \right)\\
 --  & \dots\\
---  & \wedge \left( \neg l_{\min} \vee l_k \right)\\
+--  & \wedge \left( \neg l_{c} \vee l_k \right)\\
 -- \end{aligned}
 -- \]
-minimum :: [Lit a] -> Lit a -> [[Lit a]]
-minimum lits minOfLits =
-  (minOfLits : map negate lits) : map (\l -> [-minOfLits, l]) lits
+iffConjunctionOf :: Lit a -> [Lit a] -> [[Lit a]]
+iffConjunctionOf conjOfLits lits =
+  (conjOfLits : map negate lits) : map (\l -> [-conjOfLits, l]) lits
 
--- | @maximum @\(l_{\max}\)@ [@\(l_0\)@,@\(l_1\)@,@\(\dots\)@,@\(l_k\)@]@
--- ensures that in a satisfying assignment the value of literal \(l_{\max}\) is
--- the maximum of the values of all the literals \(l_0,l_1\) up to \(l_k\).
+-- | \(l_{d}\)@ \`iffDisjunctionOf\` [@\(l_0\)@,@\(l_1\)@,@\(\dots\)@,@\(l_k\)@]@
+-- ensures that in a satisfying assignment the value of literal \(l_{d}\) is
+-- the disjunction of the values of all the literals \(l_0,l_1,\dots\) up to \(l_k\).
 --
 -- \[
 -- \begin{aligned}
--- \mathtt{maximum}\ l_{\max}\ \{l_0, l_1, \dots, l_k\} ={}
---  & \left( \neg l_{\max} \vee l_0 \vee l_1 \vee \dots \vee l_k \right)\\
---  & \wedge \left( l_{\max} \vee \neg l_0 \right)\\
---  & \wedge \left( l_{\max} \vee \neg l_1 \right)\\
+-- \mathtt{iffDisjunctionOf}\ l_{d}\ \{l_0, l_1, \dots, l_k\} ={}
+--  & l_d \leftrightarrow \bigvee_{i \in 0,\dots,k} l_i\\ ={}
+--  & \left( \neg l_{d} \vee l_0 \vee l_1 \vee \dots \vee l_k \right)\\
+--  & \wedge \left( l_{d} \vee \neg l_0 \right)\\
+--  & \wedge \left( l_{d} \vee \neg l_1 \right)\\
 --  & \dots\\
---  & \wedge \left( l_{\max} \vee \neg l_k \right)
+--  & \wedge \left( l_{d} \vee \neg l_k \right)
 -- \end{aligned}
 -- \]
-maximum :: [Lit a] -> Lit a -> [[Lit a]]
-maximum lits maxOfLits =
-  (-maxOfLits : lits) : map (\l -> [maxOfLits, -l]) lits
+iffDisjunctionOf  :: Lit a -> [Lit a] -> [[Lit a]]
+iffDisjunctionOf disjOfLits lits =
+  (-disjOfLits : lits) : map (\l -> [disjOfLits, -l]) lits
+
+iff :: Lit a -> Lit a -> [[Lit a]]
+iff l1 l2 =
+    [ [  l1, -l2 ]
+    , [ -l1,  l2 ]
+    ]
 
 -- | @litImplies premissLit clauses@ ensures \(premissLit \rightarrow clauses\).
 --
@@ -100,10 +112,10 @@ exactlyOneOf lits = atLeastOneOf lits ++ atMostOneOf lits
 -- be true, since it would contradict the clause 
 -- \( \neg lit_1 \vee \neg lit_2 \).
 atMostOneOf :: forall a. Eq a => [Lit a] -> [[Lit a]]
-atMostOneOf = zipWithSuccs banCombin . nub
+atMostOneOf = zipWithSuccs banPair . nub
   where
-    banCombin :: Lit a -> Lit a -> [Lit a]
-    banCombin l1 l2 = [ -l1, -l2 ]
+    banPair :: Lit a -> Lit a -> [Lit a]
+    banPair l1 l2 = [ -l1, -l2 ]
 
 atLeastOneOf :: [Lit a] -> [[Lit a]]
 atLeastOneOf lits = [ lits ]
