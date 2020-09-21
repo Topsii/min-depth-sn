@@ -43,6 +43,9 @@ instance Ix a => Ix (UnorderedWithDuplicates a) where
       where
         extendedBounds :: (a, a)
         extendedBounds = extendBounds b
+    rangeSize b = aSize + (aSize * (aSize - 1)) `div` 2 -- use triangularSize
+      where
+        aSize = rangeSize $ extendBounds b
 
 extendBounds :: Ord a => (UnorderedWithDuplicates a, UnorderedWithDuplicates a) -> (a, a)
 extendBounds (UnorderedWithDuplicates x1 y1, UnorderedWithDuplicates x2 y2) =

@@ -7,7 +7,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Data.Pair
     ( Pair(Pair, ..)
@@ -20,13 +19,12 @@ import Data.Pair.OrderedNoDuplicates ( OrderedNoDuplicates(..) )
 import Data.Pair.UnorderedWithDuplicates ( UnorderedWithDuplicates(..) )
 import Data.Pair.OrderedWithDuplicates ( OrderedWithDuplicates(..) )
 
+import Data.Pair.OrderAndDup
+import Data.Typeable ( Typeable )
+
 import Data.Ix
-import Data.Typeable (eqT)
-import Type.Reflection
 import Data.Enum (boundedEnumFrom, boundedEnumFromThen)
 
-data Order = Ordered | Unordered
-data Duplicates = WithDuplicates | NoDuplicates
 
 data Pair (o :: Order) (d :: Duplicates) a where
     MkUnorNoDup :: UnorderedNoDuplicates a -> Pair 'Unordered 'NoDuplicates a
@@ -66,6 +64,10 @@ instance Ix a => Ix (Pair o d a) where
     inRange (MkOrdeNoDup l, MkOrdeNoDup h) (MkOrdeNoDup x) = inRange (l,h) x
     inRange (MkUnorWiDup l, MkUnorWiDup h) (MkUnorWiDup x) = inRange (l,h) x
     inRange (MkOrdeWiDup l, MkOrdeWiDup h) (MkOrdeWiDup x) = inRange (l,h) x
+    rangeSize (MkUnorNoDup l, MkUnorNoDup h) = rangeSize (l,h)
+    rangeSize (MkOrdeNoDup l, MkOrdeNoDup h) = rangeSize (l,h)
+    rangeSize (MkUnorWiDup l, MkUnorWiDup h) = rangeSize (l,h)
+    rangeSize (MkOrdeWiDup l, MkOrdeWiDup h) = rangeSize (l,h)
 
 instance (Typeable o, Typeable d, Bounded a, Enum a, Ord a) => Enum (Pair o d a) where
     fromEnum (MkUnorNoDup x) = fromEnum x
@@ -91,25 +93,3 @@ instance (Typeable o, Typeable d, Bounded a, Enum a, Ord a) => Bounded (Pair o d
         OND -> MkOrdeNoDup maxBound
         UWD -> MkUnorWiDup maxBound
         OWD -> MkOrdeWiDup maxBound
-
-orderAndDup :: forall o d. (Typeable o, Typeable d) => OrderAndDup o d
-orderAndDup = case eqT :: Maybe ('Unordered :~: o) of
-    Just Refl -> case eqT :: Maybe ('NoDuplicates :~: d) of
-        Just Refl -> UND
-        Nothing   -> case eqT:: Maybe ('WithDuplicates :~: d) of
-            Just Refl -> UWD
-            Nothing   -> error "bad"
-    Nothing   -> case eqT:: Maybe ('Ordered :~: o) of
-        Just Refl -> case eqT :: Maybe ('NoDuplicates :~: d) of
-            Just Refl -> OND
-            Nothing   -> case eqT:: Maybe ('WithDuplicates :~: d) of
-                Just Refl -> OWD
-                Nothing   -> error "bad"
-        Nothing   -> error "bad"
-
-data OrderAndDup (o :: Order) (d :: Duplicates) where
-    UND :: OrderAndDup 'Unordered 'NoDuplicates
-    OND :: OrderAndDup 'Ordered   'NoDuplicates
-    UWD :: OrderAndDup 'Unordered 'WithDuplicates
-    OWD :: OrderAndDup 'Ordered   'WithDuplicates
-

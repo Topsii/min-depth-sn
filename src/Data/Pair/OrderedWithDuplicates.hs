@@ -32,10 +32,13 @@ instance Ix a => Ix (OrderedWithDuplicates a) where
         extendedBounds :: (a, a)
         extendedBounds = extendBounds b
     inRange b (OrderedWithDuplicates x y) =
-        inRange extendedBounds  x && inRange extendedBounds y
+        inRange extendedBounds x && inRange extendedBounds y
       where
         extendedBounds :: (a, a)
         extendedBounds = extendBounds b
+    rangeSize b = aSize * aSize
+      where
+        aSize = rangeSize $ extendBounds b
 
 extendBounds :: Ord a => (OrderedWithDuplicates a, OrderedWithDuplicates a) -> (a, a)
 extendBounds (OrderedWithDuplicates x1 y1, OrderedWithDuplicates x2 y2) =

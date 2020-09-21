@@ -42,10 +42,14 @@ instance Ix a => Ix (OrderedNoDuplicates a) where
       where
         extendedBounds :: (a, a)
         extendedBounds = extendBounds b
+    rangeSize b = aSize * aSize - aSize
+      where
+        aSize = rangeSize $ extendBounds b
 
 extendBounds :: Ord a => (OrderedNoDuplicates a, OrderedNoDuplicates a) -> (a, a)
 extendBounds (OrderedNoDuplicates x1 y1, OrderedNoDuplicates x2 y2) =
     (min x1 y1, max x2 y2)
+
 instance (Bounded a, Enum a, Eq a) => Enum (OrderedNoDuplicates a) where
     fromEnum (OrderedNoDuplicates x1 x2) =
         i_x1 * enumMax + i_x2 - fromEnum (i_x1 <= i_x2)
