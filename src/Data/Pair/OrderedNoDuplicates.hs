@@ -6,7 +6,7 @@ module Data.Pair.OrderedNoDuplicates
     ( OrderedNoDuplicates(OrderedNoDuplicates)
     ) where
 
-import GHC.Enum (boundedEnumFrom, boundedEnumFromThen)
+import Data.Enum (boundedEnumFrom, boundedEnumFromThen)
 import Data.Ix
 import Control.Exception (assert)
 
