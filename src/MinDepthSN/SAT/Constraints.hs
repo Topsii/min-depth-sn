@@ -34,9 +34,9 @@ import MinDepthSN.Vars
 --
 fixGateOrUnused :: forall t v. (ValueAs v, KnownNetType t) => GateOrUnused t -> [[Lit v]]
 fixGateOrUnused gu = case gu of
-    Gate_   (Gate i j k) -> outp i k `iffConjunctionOf` [inp i k, inp j k]
+    Gate i j k -> outp i k `iffConjunctionOf` [inp i k, inp j k]
                          ++ outp j k `iffDisjunctionOf` [inp i k, inp j k]
-    Unused_ (Unused i k) -> outp i k `iff`               inp i k
+    Unused i k -> outp i k `iff`               inp i k
   where
     inp, outp :: Channel -> Layer -> Lit v
     inp  i k = valueLit i (before k)

@@ -31,6 +31,7 @@ ghc-options:
 # - -fno-warn-unused-top-binds
 # - -fno-warn-unused-imports
 - -O2
+- -fno-ignore-asserts
 # - -fignore-asserts
 
 library:

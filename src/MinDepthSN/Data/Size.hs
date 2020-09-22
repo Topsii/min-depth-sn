@@ -21,6 +21,7 @@ module MinDepthSN.Data.Size
     , firstChannel
     , lastChannel
     , channels
+    , areAdjacent
     -- * Layer
     , Layer
     , d
@@ -131,6 +132,9 @@ n = length channels
 
 d:: Int
 d = length layers
+
+areAdjacent :: Channel -> Channel -> Bool
+areAdjacent i j = abs (fromIntegral i - fromIntegral j :: Int) == 1
 
 firstChannel :: Channel
 firstChannel = minBound
