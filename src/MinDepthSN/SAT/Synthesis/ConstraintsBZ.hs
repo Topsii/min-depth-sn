@@ -9,19 +9,15 @@ import Prelude hiding (negate)
 import Data.Word (Word32)
 import Data.Ix
 import Data.Enum (succeeding, between)
-import SAT.IPASIR (Lit, negate, polarize, lit)
-import MinDepthSN.SAT.Synthesis.VarsBZ (NetworkSynthesis(Value_))
+import SAT.IPASIR (Lit(..), negate, polarize)
+-- import MinDepthSN.SAT.Synthesis.VarsBZ (NetworkSynthesis(Value_))
 import MinDepthSN.SAT.Constraints 
     ( fixGateOrUnused
     , litImplies
     , exactlyOneOf
     , noneOf
     )
-import MinDepthSN.Data.Value (Value, inputValues, outputValues)
-import MinDepthSN.Data.GateOrUnused (GateOrUnused(..), gateOrUnusedLit)
-import MinDepthSN.Data.Unused (unusedLit)
-import MinDepthSN.Data.Gate (gateLit, KnownNetType)
-import MinDepthSN.Data.Size (Layer, Channel, channels, layers, n)
+import MinDepthSN.Vars
 import Data.List (sort)
 
 
@@ -64,7 +60,7 @@ usage = concat
     ]
   where
     usagesOfChan :: Channel -> [GateOrUnused t] -> [Lit (NetworkSynthesis t)]
-    usagesOfChan i = map lit . filter (usesChannel i)
+    usagesOfChan i = map (PosLit . GateOrUnused_) . filter (usesChannel i)
     gatesInLayer :: Layer -> [GateOrUnused t]
     gatesInLayer k = range ( GateOrUnused minBound minBound k  -- can be improved
                            , GateOrUnused maxBound maxBound k)
@@ -124,7 +120,7 @@ maximalFirstLayer
 update :: forall t. KnownNetType t => Word32 -> [[Lit (NetworkSynthesis t)]]
 update cexOffset = concat
     [-- TODO: replace (map . map . fmap) by fmap for a CNF datatype like: data CNF a = CNF [[Lit a]] deriving Functor
-        gateOrUnusedLit i j k `litImplies` (map . map . fmap) (Value_ cexOffset) (fixGateOrUnused (GateOrUnused i j k :: GateOrUnused t))
+        gateOrUnusedLit i j k `litImplies` (map . map . fmap) (\v -> v cexOffset) (fixGateOrUnused (GateOrUnused i j k :: GateOrUnused t))
     | GateOrUnused i j k <- [ minBound .. maxBound ] :: [GateOrUnused t]
     ]
 
@@ -166,8 +162,8 @@ sorts cexOffset counterexample = concat
     , zipWith fixValue (sort counterexample) outputValues
     ]
   where
-    fixValue :: Bool -> Value -> [Lit (NetworkSynthesis t)]
-    fixValue polarity val = [polarize polarity (cexOffset, val)]
+    fixValue :: Bool -> (Word32 -> NetworkSynthesis t) -> [Lit (NetworkSynthesis t)]
+    fixValue polarity mkVal = [polarize polarity (mkVal cexOffset)]
 
 -- for generalized networks
 -- behavior on unused not implemented

@@ -42,6 +42,7 @@ library:
   - array
   - finite-typelits
   - generic-data
+  - optics-core
 
 
 executables:

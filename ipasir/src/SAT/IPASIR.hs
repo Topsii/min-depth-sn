@@ -24,10 +24,7 @@ module SAT.IPASIR
     , trueAssigned
     , falseAssigned
     -- * Variables
-    , AsVar(..)
     , Var(..)
-    -- * Literals
-    , lit
     , polarize
     , SAT.IPASIR.negate
     , Lit(..)
@@ -76,22 +73,16 @@ negate = \case
     PosLit variable -> NegLit variable
     NegLit variable -> PosLit variable
 
-class Dimacs v => AsVar v a where
-    var :: a -> v
-
-lit :: AsVar v a => a -> Lit v
-lit = PosLit . var
-
 -- perhaps a bad name, since another use of the term polarity is:
 -- The polarity determines wether a variable is first 
 -- assigned true (positive polarity) or false (negative polarity)
 -- wouldn't it be ideal to rename this to lit and have unary prefix operators:
 -- (-) :: a -> Lit v
 -- (+) :: a -> Lit v
-polarize :: AsVar v a => Bool -> a -> Lit v
+polarize :: Bool -> v -> Lit v
 polarize = \case
-    True  -> PosLit . var
-    False -> NegLit . var
+    True  -> PosLit
+    False -> NegLit
 
 -- | @fromDIMACS 0@ is undefined, otherwise it holds:
 --
@@ -157,17 +148,17 @@ solveCNF clauses = addClauses clauses >> solve
 solveCNFs :: Dimacs v => [[[Lit v]]] -> Solver s v Bool
 solveCNFs cnfs =  mapM_ addClauses cnfs >> solve
 
-isTrueAssigned :: forall s v a. AsVar v a => a -> Solver s v Bool
-isTrueAssigned = Solver . ipasirVal . toDIMACS . (var :: a -> v)
+isTrueAssigned :: Dimacs v => (a -> v) -> a -> Solver s v Bool
+isTrueAssigned var = Solver . ipasirVal . toDIMACS . var
 
-isFalseAssigned :: AsVar v a =>  a -> Solver s v Bool
-isFalseAssigned literal = not <$> isTrueAssigned literal
+isFalseAssigned :: Dimacs v => (a -> v) -> a -> Solver s v Bool
+isFalseAssigned var x = not <$> (isTrueAssigned var) x
 
-assignments :: AsVar v a => [a] -> Solver s v [Bool]
-assignments = mapM isTrueAssigned
+assignments :: Dimacs v => (a -> v) -> [a] -> Solver s v [Bool]
+assignments = mapM . isTrueAssigned 
 
-trueAssigned :: AsVar v a => [a] -> Solver s v [a]
-trueAssigned = filterM isTrueAssigned
+trueAssigned :: Dimacs v => (a -> v) -> [a] -> Solver s v [a]
+trueAssigned = filterM . isTrueAssigned
 
-falseAssigned :: AsVar v a => [a] -> Solver s v [a]
-falseAssigned = filterM isFalseAssigned
+falseAssigned :: Dimacs v => (a -> v) -> [a] -> Solver s v [a]
+falseAssigned = filterM . isFalseAssigned 

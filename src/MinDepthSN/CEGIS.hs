@@ -8,13 +8,8 @@ import Data.List
 import Control.Monad (when)
 import SAT.IPASIR
 import MinDepthSN.SAT.Synthesis.ConstraintsBZ
-import MinDepthSN.SAT.Synthesis.VarsBZ
 import MinDepthSN.SAT.CexRun.Constraints
--- import MinDepthSN.SAT.CexRun.Variables
-import MinDepthSN.Data.GateOrUnused
-import MinDepthSN.Data.Gate (KnownNetType, NetworkType(..))
-import MinDepthSN.Data.Size
-import MinDepthSN.Data.Value
+import MinDepthSN.Vars
 import MinDepthSN.Data.Window
 import Data.Word (Word32)
 
@@ -40,7 +35,7 @@ networkSolution = runSolver $ do
     -- actually synthesizeSortingNetwork should be called here but we lack a cex if initCexCnt = 0
     sat <- solve
     when (not sat) $ error "no network was found initially" -- instead return previous cex i.e. an element from initCexs?
-    network <- trueAssigned [ minBound .. maxBound :: GateOrUnused t ]
+    network <- trueAssigned GateOrUnused_ [ minBound .. maxBound ]
     validateSortingNetwork cxData network
 
 -- synthesize a network, that also sorts the given input
@@ -49,7 +44,7 @@ synthesizeSortingNetwork :: KnownNetType t => (Word32, Word32) -> [Bool] -> Solv
 synthesizeSortingNetwork (cexIdx, cexOffset) cexInput = do
     r <- solveCNFs [ sorts cexOffset cexInput ]
     if r then do
-        network <- trueAssigned [ minBound .. maxBound ]
+        network <- trueAssigned GateOrUnused_ [ minBound .. maxBound ]
         validateSortingNetwork (cexIdx, cexOffset) network
     else pure $ Left cexInput
 
@@ -69,7 +64,7 @@ findCounterexampleRun network = runSolver $ do
         -- let positions = [ minBound .. maxBound ] :: [CexRun]
         -- vals <- assignments positions
         -- let positionValues = zip vals positions
-        counterexampleInput <- assignments inputValues
+        counterexampleInput <- assignments Value_ inputValues
         pure $ Just
             {-
             $ trace (show network ++ "\n" ++ show positionValues ++ "\n")

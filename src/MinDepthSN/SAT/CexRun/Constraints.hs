@@ -9,11 +9,7 @@ import Data.List (inits, tails)
 import Data.Enum (succeeding)
 import SAT.IPASIR (Lit(..), negate)
 import MinDepthSN.SAT.Constraints (fixGateOrUnused)
-import MinDepthSN.SAT.CexRun.Variables (CexRun(..))
-import MinDepthSN.Data.Size (channels, afterLastLayer)
-import MinDepthSN.Data.Value (outputValues, valueLit)
-import MinDepthSN.Data.GateOrUnused (GateOrUnused)
-import MinDepthSN.Data.Gate (KnownNetType)
+import MinDepthSN.Vars
 --findCounterEx :: [Gate]
 --findCounterEx = undefined
 
@@ -57,10 +53,9 @@ unsortedOutput :: [[Lit CexRun]]
 unsortedOutput = zipWith (++) (inits outputOnes) (tails outputZeros)
   where
     outputZeros, outputOnes ::  [Lit CexRun]
-    outputZeros = map (NegLit . CexRun) outputValues
-    outputOnes  = map (PosLit . CexRun) outputValues
+    outputZeros = map NegLit outputValues
+    outputOnes  = map PosLit outputValues
 
 -- | See 'MinDepthSN.SAT.Constraints.fixGateOrUnused'.
 fixNetwork :: KnownNetType t => [GateOrUnused t] -> [[Lit CexRun]]
--- TODO: replace (map . map . fmap) by fmap for a CNF datatype like: data CNF a = CNF [[Lit a]] deriving Functor
-fixNetwork = concatMap ((map . map . fmap) CexRun . fixGateOrUnused)
+fixNetwork = concatMap fixGateOrUnused
