@@ -32,6 +32,7 @@ data Pair (o :: Order) (d :: Duplicates) a where
     MkUnorWiDup :: UnorderedWithDuplicates a -> Pair 'Unordered 'WithDuplicates a
     MkOrdeWiDup :: OrderedWithDuplicates a -> Pair 'Ordered 'WithDuplicates a
 
+{-# COMPLETE Pair #-}
 pattern Pair :: forall o d a. (Typeable o, Typeable d, Ord a) => a -> a -> Pair o d a
 pattern Pair x y <- (matchPair -> (x, y)) where
     Pair x y = case (orderAndDup :: OrderAndDup o d) of

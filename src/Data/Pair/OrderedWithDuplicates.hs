@@ -1,4 +1,3 @@
-{-# language DerivingStrategies #-}
 {-# language DeriveGeneric #-}
 {-# language DerivingVia #-}
 {-# language ScopedTypeVariables #-}

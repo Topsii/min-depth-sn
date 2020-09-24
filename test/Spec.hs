@@ -7,9 +7,11 @@
 {-# language MultiParamTypeClasses #-}
 {-# language GADTs #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 import Test.Tasty
 import Test.SmallCheck.Series
+import Test.Tasty.SmallCheck
 
 import Test.PreservesOrd
 import Test.Ix
@@ -45,7 +47,10 @@ testPairs = testGroup "Pair"
     ]
 
 testPair :: forall (o :: Order) (d :: Duplicates). (Typeable o, Typeable d) => Proxy o -> Proxy d -> TestTree
-testPair _o _d = testSmallType (pairs @o @d @(Finite 5)) PreservesOrd
+testPair _o _d = testGroup "Pair tests" $
+    [ testSmallType (pairs @o @d @(Finite 5)) PreservesOrd
+    , testProperty "pair ix range" $ ixPairs @o @d @(Finite 5) Proxy Proxy Proxy
+    ]
     
 testAbsDiffGT1 :: forall (o :: Order). Typeable o => Proxy o -> TestTree
 testAbsDiffGT1 _o = testSmallType (absdiffgt1s @o @(Finite 5)) ViolatesOrd
@@ -59,13 +64,23 @@ testSmallType vals ord = testGroup (showsTypeRep (typeRep (Proxy @a)) $ "") $
         PreservesOrd -> [ testIxOrdLaws @a Proxy ]
         ViolatesOrd  -> []
 
+ixPairs :: forall (o :: Order) (d :: Duplicates) a m. (Typeable o, Typeable d, Show a, Bounded a, Ix a, Serial m a) => Proxy o -> Proxy d -> Proxy a -> Property m
+ixPairs _o _d _a =
+    over series $ \(l :: Pair o d a) ->
+    over series $ \(u :: Pair o d a) ->
+        range (l,u) == pairIxRange (l,u)
 
+pairIxRange :: (Typeable o, Typeable d, Ix a) => (Pair o d a, Pair o d a) -> [Pair o d a]
+pairIxRange (Pair l1 l2, Pair u1 u2) = pairsRange (min l1 l2, max u1 u2)
 
-pairs :: forall o d a. (Bounded a, Enum a, Ord a, Typeable o, Typeable d) => [Pair o d a]
-pairs = 
+pairs :: forall o d a. (Bounded a, Ix a, Typeable o, Typeable d) => [Pair o d a]
+pairs = pairsRange (minBound, maxBound)
+
+pairsRange :: forall o d a. (Ix a, Typeable o, Typeable d) => (a, a) -> [Pair o d a]
+pairsRange b = 
     [ Pair x y
-    | x <- [ minBound .. maxBound ]
-    , y <- [ minBound .. maxBound ]
+    | x <- range b
+    , y <- range b
     , x `cmp` y
     ]
   where
@@ -76,11 +91,14 @@ pairs =
         UWD -> (<=)
         OWD -> const (const True)
 
-absdiffgt1s :: forall o a. (Bounded a, Enum a, Ord a, Typeable o) => [AbsDiffGT1 o a] 
-absdiffgt1s =
+absdiffgt1s :: forall o a. (Bounded a, Enum a, Ix a, Typeable o) => [AbsDiffGT1 o a] 
+absdiffgt1s = absdiffgt1sRange (minBound,maxBound)
+
+absdiffgt1sRange :: forall o a. (Enum a, Ix a, Typeable o) => (a, a) -> [AbsDiffGT1 o a] 
+absdiffgt1sRange b =
     [ AbsDiffGT1 x y
-    | x <- [ minBound .. maxBound ]
-    , y <- [ minBound .. maxBound ]
+    | x <- range b
+    , y <- range b
     , x `cmp` y && abs (fromEnum x - fromEnum y) > 1
     ]
   where
@@ -89,10 +107,10 @@ absdiffgt1s =
         UND -> (<=)
         OND -> (/=)
 
-instance (Bounded a, Enum a, Ord a, Typeable o, Typeable d, Monad m) => Serial m (Pair o d a) where
+instance (Bounded a, Ix a, Typeable o, Typeable d, Monad m) => Serial m (Pair o d a) where
     series = generate $ \d -> take (d+1) pairs
 
-instance (Bounded a, Enum a, Ord a, Typeable o, Monad m) => Serial m (AbsDiffGT1 o a) where
+instance (Bounded a, Enum a, Ix a, Typeable o, Monad m) => Serial m (AbsDiffGT1 o a) where
     series = generate $ \d -> take (d+1) absdiffgt1s
 
 instance (KnownNat n, Monad m) => Serial m (Finite n) where
