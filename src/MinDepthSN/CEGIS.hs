@@ -7,7 +7,6 @@
 module MinDepthSN.CEGIS where
 import Debug.Trace
 import Data.List
-import Control.Monad (when)
 import SAT.IPASIR
 import MinDepthSN.SAT.Synthesis.ConstraintsBZ
 import MinDepthSN.SAT.CexRun.Constraints
@@ -54,44 +53,47 @@ networkSolution = runSolver $ do
     -- start cegis
     -- actually synthesizeSortingNetwork should be called here but we lack a cex if initCexCnt = 0
     sat <- solve
-    when (not sat) $ error "no network was found initially" -- instead return previous cex i.e. an element from initCexs?
-    network <- trueAssigned gateOrUnused_ [ minBound .. maxBound ]
-    validateSortingNetwork cxData network
+    case sat of
+        Unsatisfiable -> error "no network was found initially" -- instead return previous cex i.e. an element from initCexs?
+        Satisfiable   -> do
+            network <- trueAssigned gateOrUnused_ [ minBound .. maxBound ]
+            validateSortingNetwork cxData network
 
 -- synthesize a network, that also sorts the given input
 -- if synthesization succeeds: validate that this new network is a sorting network 
 synthesizeSortingNetwork :: forall s t. KnownNetType t => (Word32, Word32) -> [Bool] -> Solver s (NetworkSynthesis t) (Either [Bool] [GateOrUnused t])
 synthesizeSortingNetwork (cexIdx, cexOffset) cexInput = do
     r <- solveCNFs [ sorts' cexOffset cexInput ]
-    if r then do
-        network <- trueAssigned gateOrUnused_ [ minBound .. maxBound ]
-        -- let fromOneInUpTos = [minBound .. maxBound] :: [FromOneInUpTo t]
-        -- fromAss <- assignments fromOneInUpTo_ [ minBound .. maxBound ]
-        -- let fromValues = zip fromAss fromOneInUpTos
-        -- let toOneInUpTos = [minBound .. maxBound] :: [ToOneInUpTo t]
-        -- toAss <- assignments toOneInUpTo_ [ minBound .. maxBound ]
-        -- let toValues = zip toAss toOneInUpTos
-        -- let positions = [ minBound .. maxBound ] :: [Value]
-        -- vals <- assignments (\v -> value_ v (0::Word32)) positions
-        -- let positionValues = zip vals positions
-        validateSortingNetwork (cexIdx + 1, cexOffset + fromIntegral (n * (d+1))) 
-            {-
-            $ trace (
-                let sameLayer (GateOrUnused _ _ k) (GateOrUnused _ _ l) = k == l
-                    sameLayer _ _ = error ""
-                    sameLayerF (_, (FromOneInUpTo _ _ k))(_, (FromOneInUpTo _ _ l)) = k == l
-                    sameLayerF _ _ = error ""
-                    sameLayerT (_, (ToOneInUpTo _ _ k))(_, (ToOneInUpTo _ _ l)) = k == l
-                    sameLayerT _ _ = error ""
-                    sameLayer' (_,(Value _ k)) (_,(Value _ l)) = k == l
-                    sameLayer' _ _ = error ""
-                in (unlines . map show $ groupBy sameLayer network) ++ "\n"
-                ++ (unlines . map show $ groupBy sameLayerF fromValues) ++ "\n"
-                ++ (unlines . map show $ groupBy sameLayerT toValues) ++ "\n"
-                ++ (unlines . map show $ groupBy sameLayer' positionValues) ++ "\n")
-            -}
-            network
-    else pure $ Left cexInput
+    case r of
+        Unsatisfiable -> pure $ Left cexInput
+        Satisfiable   -> do
+            network <- trueAssigned gateOrUnused_ [ minBound .. maxBound ]
+            -- let fromOneInUpTos = [minBound .. maxBound] :: [FromOneInUpTo t]
+            -- fromAss <- assignments fromOneInUpTo_ [ minBound .. maxBound ]
+            -- let fromValues = zip fromAss fromOneInUpTos
+            -- let toOneInUpTos = [minBound .. maxBound] :: [ToOneInUpTo t]
+            -- toAss <- assignments toOneInUpTo_ [ minBound .. maxBound ]
+            -- let toValues = zip toAss toOneInUpTos
+            -- let positions = [ minBound .. maxBound ] :: [Value]
+            -- vals <- assignments (\v -> value_ v (0::Word32)) positions
+            -- let positionValues = zip vals positions
+            validateSortingNetwork (cexIdx + 1, cexOffset + fromIntegral (n * (d+1))) 
+                {-
+                $ trace (
+                    let sameLayer (GateOrUnused _ _ k) (GateOrUnused _ _ l) = k == l
+                        sameLayer _ _ = error ""
+                        sameLayerF (_, (FromOneInUpTo _ _ k))(_, (FromOneInUpTo _ _ l)) = k == l
+                        sameLayerF _ _ = error ""
+                        sameLayerT (_, (ToOneInUpTo _ _ k))(_, (ToOneInUpTo _ _ l)) = k == l
+                        sameLayerT _ _ = error ""
+                        sameLayer' (_,(Value _ k)) (_,(Value _ l)) = k == l
+                        sameLayer' _ _ = error ""
+                    in (unlines . map show $ groupBy sameLayer network) ++ "\n"
+                    ++ (unlines . map show $ groupBy sameLayerF fromValues) ++ "\n"
+                    ++ (unlines . map show $ groupBy sameLayerT toValues) ++ "\n"
+                    ++ (unlines . map show $ groupBy sameLayer' positionValues) ++ "\n")
+                -}
+                network
 
 -- validate that a network is a sorting network by confirming the absence of counterexample runs
 -- if validation fails: synthesize a new network that also sorts the counterexample
@@ -100,25 +102,3 @@ validateSortingNetwork (cexIdx,cexOffset) network = case findCounterexampleRun n
     Nothing -> pure $ Right network
     Just cexInput -> trace (show cexIdx ++ ": " ++ (concatMap (show . fromEnum) cexInput)) $
         synthesizeSortingNetwork (cexIdx, cexOffset) cexInput
-
--- find a counterexample run where some input is not sorted
-findCounterexampleRun :: KnownNetType t => [GateOrUnused t] -> Maybe [Bool] -- unnecessary KnownNetType constraint?
-findCounterexampleRun network = runSolver $ do
-    s <- solveCNFs [fixNetwork network, unsortedOutput]
-    if s then do
-        -- let positions = [ minBound .. maxBound ] :: [CexRun]
-        -- vals <- assignments id positions
-        -- let positionValues = zip vals positions
-        counterexampleInput <- assignments value_ inputValues
-        pure $ Just
-            {-
-            $ trace (
-                let sameLayer (GateOrUnused _ _ k) (GateOrUnused _ _ l) = k == l
-                    sameLayer _ _ = error ""
-                    sameLayer' (_,(Value _ k)) (_,(Value _ l)) = k == l
-                    sameLayer' _ _ = error ""
-                in (unlines . map show $ groupBy sameLayer network) ++ "\n"
-                ++ (unlines . map show $ groupBy sameLayer' positionValues) ++ "\n")
-            -}
-            counterexampleInput
-    else pure Nothing

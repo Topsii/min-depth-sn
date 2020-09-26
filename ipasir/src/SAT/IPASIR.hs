@@ -11,9 +11,11 @@
 module SAT.IPASIR
     ( Solver
     , runSolver
-    -- * Add clauses and solve
+    -- * Adding clauses
     , addClause
     , addClauses
+    -- * Solving
+    , SolveResult(..)
     , solve
     , solveCNF
     , solveCNFs
@@ -40,6 +42,10 @@ import Foreign.C.Types (CInt)
 import SAT.IPASIR.Bindings hiding (Solver, runSolver)
 import qualified SAT.IPASIR.Bindings as IPASIR
 import Control.Monad.Primitive
+
+
+data SolveResult = Satisfiable | Unsatisfiable
+    deriving stock (Eq,Show)
 
 -- newtype Solver
 -- ensure correct state: input/sat/unsat
@@ -138,14 +144,18 @@ addClause literals = mapM_ addLiteral literals >> finalizeClause
 addClauses :: Dimacs v => [[Lit v]] -> Solver s v ()
 addClauses = mapM_ addClause
 
-solve :: Dimacs v => Solver s v Bool
-solve = Solver ipasirSolve
+solve :: Dimacs v => Solver s v SolveResult
+solve = toSolveResult <$> Solver ipasirSolve
+  where
+    toSolveResult :: Bool -> SolveResult
+    toSolveResult r = if r then Satisfiable else Unsatisfiable
 
-solveCNF :: Dimacs v => [[Lit v]] -> Solver s v Bool
+
+solveCNF :: Dimacs v => [[Lit v]] -> Solver s v SolveResult
 solveCNF clauses = addClauses clauses >> solve
 
 -- | Solves a conjunction of cnf formulas.
-solveCNFs :: Dimacs v => [[[Lit v]]] -> Solver s v Bool
+solveCNFs :: Dimacs v => [[[Lit v]]] -> Solver s v SolveResult
 solveCNFs cnfs =  mapM_ addClauses cnfs >> solve
 
 isTrueAssigned :: Dimacs v => (a -> v) -> a -> Solver s v Bool
