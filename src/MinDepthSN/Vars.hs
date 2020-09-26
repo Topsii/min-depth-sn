@@ -26,66 +26,49 @@ module MinDepthSN.Vars
     ( module MinDepthSN.Data.Size
     , module MinDepthSN.Data.NetworkType
     -- * Unused
-    , Unused
-        ( Unused
-        , Unused_
-        )
+    , Unused ( Unused )
     , UnusedAs()
+    , unused_
     , unusedLit
     -- * Gate
     , Gate
         ( Gate
-        , Gate_
         )
     , GateAs()
+    , gate_
     , gateLit
     -- * GateOrUnused
-    , GateOrUnused
-        ( GateOrUnused
-        , Gate_
-        , Unused_
-        , Unused
-        )
+    , GateOrUnused ( GateOrUnused, Unused )
     , GateOrUnusedAs(..)
+    , gateOrUnused_
     , gateOrUnusedLit
     -- * ToOneInUpTo / FromOneInUpTo
     , ToOneInUpTo
         ( ToOneInUpTo
-        , ToOneInUpTo_
         )
-    , FromOneInUpTo
-        ( FromOneInUpTo
-        , FromOneInUpTo_
-        )
+    , FromOneInUpTo ( FromOneInUpTo )
     , ToOneInUpToAs(..)
     , FromOneInUpToAs(..)
+    , toOneInUpTo_
+    , fromOneInUpTo_
     , toOneInUpToLit
     , fromOneInUpToLit
     -- * Value
-    , Value
-        ( Value
-        , Value_
-        )
+    , Value ( Value )
     , ValueAs()
+    , value_
     , inputValues
     , outputValues
     , valueLit
     -- * NetworkSynthesis
     , NetworkSynthesis
         ( Gate
-        , Gate_
         , Unused
-        , Unused_
         , GateOrUnused
-        , GateOrUnused_
         , Value
-        , Value_
         )
     -- * CexRun
-    , CexRun
-        ( Value
-        , Value_
-        )
+    , CexRun ( Value )
     ) where
 
 import Data.Ix
@@ -125,12 +108,10 @@ instance UnusedAs Unused where
 {-# COMPLETE Unused :: Unused #-}
 pattern Unused :: UnusedAs u => Channel -> Layer -> u
 pattern Unused i k <- (preview unusedPrism -> Just (MkUnused k i))
-  where Unused i k = review unusedPrism $ MkUnused k i
+  where Unused i k = unused_ $ MkUnused k i
 
-{-# COMPLETE Unused_ :: Unused #-}
-pattern Unused_ :: UnusedAs u => Unused -> u
-pattern Unused_ u <- (preview unusedPrism -> Just u)
-  where Unused_ u = review unusedPrism u
+unused_ :: UnusedAs u => Unused -> u
+unused_ u = review unusedPrism u
 
 instance Show Unused where
     showsPrec p (Unused i k) = showParen (p >= 11) $
@@ -174,12 +155,11 @@ instance GateAs Gate where
 
 {-# COMPLETE Gate :: Gate #-}
 pattern Gate :: (GateAs g, KnownNetType t) => Channel -> Channel -> Layer -> g t
-pattern Gate i j k = Gate_ (MkGate k (Pair i j))
+pattern Gate i j k <- (preview gatePrism -> Just (MkGate k (Pair i j)))
+  where Gate i j k = gate_ $ MkGate k (Pair i j)
 
-{-# COMPLETE Gate_ :: Gate #-}
-pattern Gate_ :: (GateAs g, KnownNetType t) => Gate t -> g t
-pattern Gate_ x <- (preview gatePrism -> Just x)
-  where Gate_ x = review gatePrism x
+gate_ :: (GateAs g, KnownNetType t) => Gate t -> g t
+gate_ = review gatePrism 
 
 instance KnownNetType t => Show (Gate t) where
     showsPrec p (Gate i j k) = showParen (p >= 11) $
@@ -231,17 +211,13 @@ instance GateOrUnusedAs GateOrUnused where
 
 {-# COMPLETE GateOrUnused :: GateOrUnused #-}
 pattern GateOrUnused :: (GateOrUnusedAs gu, KnownNetType t) => Channel -> Channel -> Layer -> gu t
-pattern GateOrUnused i j k = GateOrUnused_ (MkGateOrUnused k (Pair i j))
+pattern GateOrUnused i j k <- (preview gateOrUnusedPrism -> Just (MkGateOrUnused k (Pair i j)))
+  where GateOrUnused i j k = gateOrUnused_ (MkGateOrUnused k (Pair i j))
 
-{-# COMPLETE GateOrUnused_ :: GateOrUnused #-}
-pattern GateOrUnused_ :: (GateOrUnusedAs gu, KnownNetType t) => GateOrUnused t -> gu t
-pattern GateOrUnused_ x <- (preview gateOrUnusedPrism -> Just x)
-  where GateOrUnused_ x = review gateOrUnusedPrism x
+gateOrUnused_ :: (GateOrUnusedAs gu, KnownNetType t) => GateOrUnused t -> gu t
+gateOrUnused_ = review gateOrUnusedPrism
 
 {-# COMPLETE Gate, Unused :: GateOrUnused #-}
-{-# COMPLETE Gate_, Unused :: GateOrUnused #-}
-{-# COMPLETE Gate, Unused_ :: GateOrUnused #-}
-{-# COMPLETE Gate_, Unused_ :: GateOrUnused #-}
 
 instance GateAs GateOrUnused where
     gatePrism :: forall t. KnownNetType t => Prism' (GateOrUnused t) (Gate t)
@@ -266,8 +242,8 @@ instance KnownNetType t => UnusedAs (GateOrUnused t) where
             | otherwise = Left gu
 
 instance KnownNetType t => Show (GateOrUnused t) where
-    showsPrec p (Gate_ g)   = showParen (p >= 11) $ showString "Gate_ "   . showsPrec 11 g 
-    showsPrec p (Unused_ u) = showParen (p >= 11) $ showString "Unused_ " . showsPrec 11 u
+    showsPrec p (Gate i j k)   = showParen (p >= 11) $ showString "Gate_ "   . showsPrec 11 (Gate i j k :: Gate t) 
+    showsPrec p (Unused i k) = showParen (p >= 11) $ showString "Unused_ " . showsPrec 11 (Unused i k :: Unused)
 
 -- | Literal of 'GateOrUnused' with positive polarity.
 gateOrUnusedLit :: (KnownNetType t, GateOrUnusedAs gu) => Channel -> Channel -> Layer -> Lit (gu t)
@@ -332,21 +308,19 @@ instance FromOneInUpToAs FromOneInUpTo where
 
 {-# COMPLETE ToOneInUpTo :: ToOneInUpTo #-}
 pattern ToOneInUpTo :: (ToOneInUpToAs f, KnownNetType t) => Channel -> Channel -> Layer -> (f t)
-pattern ToOneInUpTo i j k = ToOneInUpTo_ (MkToOneInUpTo k (Pair i j))
+pattern ToOneInUpTo i j k <- (preview toOneInUpToPrism -> Just (MkToOneInUpTo k (Pair i j)))
+  where ToOneInUpTo i j k = review toOneInUpToPrism (MkToOneInUpTo k (Pair i j))
 
 {-# COMPLETE FromOneInUpTo :: FromOneInUpTo #-}
 pattern FromOneInUpTo :: (FromOneInUpToAs f, KnownNetType t) => Channel -> Channel -> Layer -> (f t)
-pattern FromOneInUpTo i j k = FromOneInUpTo_ (MkFromOneInUpTo k (Pair i j))
+pattern FromOneInUpTo i j k <- (preview fromOneInUpToPrism -> Just (MkFromOneInUpTo k (Pair i j)))
+  where FromOneInUpTo i j k = review fromOneInUpToPrism (MkFromOneInUpTo k (Pair i j))
 
-{-# COMPLETE ToOneInUpTo :: ToOneInUpTo #-}
-pattern ToOneInUpTo_ :: (ToOneInUpToAs f, KnownNetType t) => ToOneInUpTo t -> (f t)
-pattern ToOneInUpTo_ t <- (preview toOneInUpToPrism -> Just t)
-  where ToOneInUpTo_ t = review toOneInUpToPrism t
+toOneInUpTo_ :: (ToOneInUpToAs f, KnownNetType t) => ToOneInUpTo t -> (f t)
+toOneInUpTo_ = review toOneInUpToPrism
 
-{-# COMPLETE FromOneInUpTo :: FromOneInUpTo #-}
-pattern FromOneInUpTo_ :: (FromOneInUpToAs f, KnownNetType t) => FromOneInUpTo t -> (f t)
-pattern FromOneInUpTo_ f <- (preview fromOneInUpToPrism -> Just f)
-  where FromOneInUpTo_ f = review fromOneInUpToPrism f
+fromOneInUpTo_ :: (FromOneInUpToAs f, KnownNetType t) => FromOneInUpTo t -> (f t)
+fromOneInUpTo_ = review fromOneInUpToPrism
 
 instance KnownNetType t => Show (ToOneInUpTo t) where
         showsPrec p (ToOneInUpTo i j k) = showParen (p >= 11) $
@@ -390,25 +364,24 @@ instance ValueAs Value where
 
 {-# COMPLETE Value :: Value #-}
 pattern Value :: ValueAs v => Channel -> BetweenLayers -> v
-pattern Value i k = Value_ (MkValue k i)
+pattern Value i k <- (preview valuePrism -> Just (MkValue k i))
+  where Value i k = value_ (MkValue k i)
 
-{-# COMPLETE Value_ :: Value #-}
-pattern Value_ :: ValueAs v => Value -> v
-pattern Value_ v <- (preview valuePrism -> Just v)
-  where Value_ v = review valuePrism v
+value_ :: ValueAs v => Value -> v
+value_ = review valuePrism
 
 instance Show Value where
     showsPrec p (Value i k) = showParen (p >= 11) $
         showString "Value " . showsPrec 11 i . showChar ' ' . showsPrec 11 k 
 
 inputValues :: ValueAs v => [v]
-inputValues = map Value_ $
+inputValues = map value_ $
     range
         ( Value firstChannel beforeFirstLayer
         , Value lastChannel  beforeFirstLayer)
 
 outputValues :: ValueAs v => [v]
-outputValues = map Value_ $
+outputValues = map value_ $
     range
         ( Value firstChannel afterLastLayer
         , Value lastChannel  afterLastLayer)
@@ -436,17 +409,7 @@ data NetworkSynthesis t
     deriving Enum via (FiniteEnumeration (NetworkSynthesis t))
 
 {-# COMPLETE ToOneInUpTo, FromOneInUpTo, Value, Gate, Unused :: NetworkSynthesis #-}
-{-# COMPLETE ToOneInUpTo, FromOneInUpTo, Value, Gate, Unused_ :: NetworkSynthesis #-}
-{-# COMPLETE ToOneInUpTo, FromOneInUpTo, Value, Gate_, Unused :: NetworkSynthesis #-}
-{-# COMPLETE ToOneInUpTo, FromOneInUpTo, Value, Gate_, Unused_ :: NetworkSynthesis #-}
 {-# COMPLETE ToOneInUpTo, FromOneInUpTo, Value, GateOrUnused :: NetworkSynthesis #-}
-{-# COMPLETE ToOneInUpTo, FromOneInUpTo, Value, GateOrUnused_ :: NetworkSynthesis #-}
-{-# COMPLETE ToOneInUpTo, FromOneInUpTo, Value_, Gate, Unused :: NetworkSynthesis #-}
-{-# COMPLETE ToOneInUpTo, FromOneInUpTo, Value_, Gate, Unused_ :: NetworkSynthesis #-}
-{-# COMPLETE ToOneInUpTo, FromOneInUpTo, Value_, Gate_, Unused :: NetworkSynthesis #-}
-{-# COMPLETE ToOneInUpTo, FromOneInUpTo, Value_, Gate_, Unused_ :: NetworkSynthesis #-}
-{-# COMPLETE ToOneInUpTo, FromOneInUpTo, Value_, GateOrUnused :: NetworkSynthesis #-}
-{-# COMPLETE ToOneInUpTo, FromOneInUpTo, Value_, GateOrUnused_ :: NetworkSynthesis #-}
 
 instance GateOrUnusedAs NetworkSynthesis where
     gateOrUnusedPrism :: Prism' (NetworkSynthesis t) (GateOrUnused t)
@@ -512,13 +475,13 @@ instance ValueAs (Word32 -> NetworkSynthesis t) where
 -- pattern OffsetValue
 -- instance 
 
-{-# COMPLETE GU, ToOneInUpTo_, FromOneInUpTo_, Val :: NetworkSynthesis #-}
+{-# COMPLETE GU, ToOneInUpTo, FromOneInUpTo, Val :: NetworkSynthesis #-}
 
 instance KnownNetType t => Show (NetworkSynthesis t) where
     showsPrec p ns = showParen (p >= 11) $ case ns of
         GU gu -> showString "GateOrUnused_ " . showsPrec 11 gu
-        ToOneInUpTo_ t -> showString "ToOneInUpTo_ " . showsPrec 11 t
-        FromOneInUpTo_ f -> showString "FromOneInUpTo_ " . showsPrec 11 f
+        ToOneInUpTo i j k -> showString "ToOneInUpTo_ " . showsPrec 11 (ToOneInUpTo i j k :: ToOneInUpTo t)
+        FromOneInUpTo i j k -> showString "FromOneInUpTo_ " . showsPrec 11 (FromOneInUpTo i j k :: FromOneInUpTo t)
         Val cexIdx val -> showString "Value_ " . showsPrec 11 cexIdx . showChar ' ' . showsPrec 11 val
 
 instance KnownNetType t => Dimacs (NetworkSynthesis t) where
@@ -539,7 +502,6 @@ instance Show CexRun where
         showString "CexRun " . showsPrec 11 value 
 
 {-# COMPLETE Value :: CexRun #-}
-{-# COMPLETE Value_ :: CexRun #-}
 
 instance ValueAs CexRun where
     valuePrism :: Prism' CexRun Value

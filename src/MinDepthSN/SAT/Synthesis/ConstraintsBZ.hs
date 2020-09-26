@@ -62,7 +62,7 @@ usage = concat
     ]
   where
     usagesOfChan :: Channel -> [GateOrUnused t] -> [Lit (NetworkSynthesis t)]
-    usagesOfChan i = map (PosLit . GateOrUnused_) . filter (usesChannel i)
+    usagesOfChan i = map (PosLit . gateOrUnused_) . filter (usesChannel i)
     gatesInLayer :: Layer -> [GateOrUnused t]
     gatesInLayer k = range ( GateOrUnused minBound minBound k  -- can be improved
                            , GateOrUnused maxBound maxBound k)
@@ -73,11 +73,11 @@ usage = concat
 -- mapped to the same DIMACS value. Thus they are skipped here
 usageOfOneInUpTo :: [[Lit (NetworkSynthesis 'Standard)]]
 usageOfOneInUpTo = concat $
-    [ PosLit (ToOneInUpTo_ t) `iffDisjunctionOf` [gateLit l j k | l <- range (i, pred j)]
+    [ PosLit (toOneInUpTo_ t) `iffDisjunctionOf` [gateLit l j k | l <- range (i, pred j)]
     | t@(ToOneInUpTo i j k) <- [ minBound .. maxBound ] 
     , not $ areAdjacent i j
     ] ++
-    [ PosLit (FromOneInUpTo_ f) `iffDisjunctionOf` [gateLit i l k | l <- range (succ i, j)]
+    [ PosLit (fromOneInUpTo_ f) `iffDisjunctionOf` [gateLit i l k | l <- range (succ i, j)]
     | f@(FromOneInUpTo i j k) <- [ minBound .. maxBound ]
     , not $ areAdjacent i j
     ]
@@ -132,14 +132,14 @@ maximalFirstLayer
 update :: forall t. KnownNetType t => Word32 -> [[Lit (NetworkSynthesis t)]]
 update cexOffset = concat
     [-- TODO: replace (map . map . fmap) by fmap for a CNF datatype like: data CNF a = CNF [[Lit a]] deriving Functor
-       PosLit (GateOrUnused_ gu) `litImplies` (map . map . fmap) (\v -> v cexOffset) (fixGateOrUnused gu)
+       PosLit (gateOrUnused_ gu) `litImplies` (map . map . fmap) (\v -> v cexOffset) (fixGateOrUnused gu)
     | gu <- [ minBound .. maxBound ] :: [GateOrUnused t]
     ]
 
 updateEM :: Word32 -> (Channel, Channel) -> [[Lit (NetworkSynthesis 'Standard)]]
 updateEM cexOffset (l, u) = concat
     [ concat
-        [ PosLit (Gate_ g) `litImplies` fixGate g
+        [ PosLit (gate_ g) `litImplies` fixGate g
         | g <- [ minBound .. maxBound ]
         ]
     , 
@@ -175,9 +175,9 @@ updateEM cexOffset (l, u) = concat
 -- improved update constraints that enable more propagations by Thorsten Ehlers and Mike Müller
 sortsEM :: Word32 -> [Bool] -> [[Lit (NetworkSynthesis 'Standard)]]
 sortsEM cexOffset counterexample = concat
-    [ zipWith fixValue counterexample $ map Value_ $ range (Value l beforeFirstLayer, Value u beforeFirstLayer)
+    [ zipWith fixValue counterexample $ map value_ $ range (Value l beforeFirstLayer, Value u beforeFirstLayer)
     , updateEM cexOffset (l, u)
-    , zipWith fixValue (sort counterexample) $ map Value_ $ range (Value l afterLastLayer, Value u afterLastLayer)
+    , zipWith fixValue (sort counterexample) $ map value_ $ range (Value l afterLastLayer, Value u afterLastLayer)
     ]
   where
     l, u :: Channel

@@ -55,7 +55,7 @@ networkSolution = runSolver $ do
     -- actually synthesizeSortingNetwork should be called here but we lack a cex if initCexCnt = 0
     sat <- solve
     when (not sat) $ error "no network was found initially" -- instead return previous cex i.e. an element from initCexs?
-    network <- trueAssigned GateOrUnused_ [ minBound .. maxBound ]
+    network <- trueAssigned gateOrUnused_ [ minBound .. maxBound ]
     validateSortingNetwork cxData network
 
 -- synthesize a network, that also sorts the given input
@@ -64,15 +64,15 @@ synthesizeSortingNetwork :: forall s t. KnownNetType t => (Word32, Word32) -> [B
 synthesizeSortingNetwork (cexIdx, cexOffset) cexInput = do
     r <- solveCNFs [ sorts' cexOffset cexInput ]
     if r then do
-        network <- trueAssigned GateOrUnused_ [ minBound .. maxBound ]
+        network <- trueAssigned gateOrUnused_ [ minBound .. maxBound ]
         -- let fromOneInUpTos = [minBound .. maxBound] :: [FromOneInUpTo t]
-        -- fromAss <- assignments FromOneInUpTo_ [ minBound .. maxBound ]
+        -- fromAss <- assignments fromOneInUpTo_ [ minBound .. maxBound ]
         -- let fromValues = zip fromAss fromOneInUpTos
         -- let toOneInUpTos = [minBound .. maxBound] :: [ToOneInUpTo t]
-        -- toAss <- assignments ToOneInUpTo_ [ minBound .. maxBound ]
+        -- toAss <- assignments toOneInUpTo_ [ minBound .. maxBound ]
         -- let toValues = zip toAss toOneInUpTos
         -- let positions = [ minBound .. maxBound ] :: [Value]
-        -- vals <- assignments (\v -> Value_ v (0::Word32)) positions
+        -- vals <- assignments (\v -> value_ v (0::Word32)) positions
         -- let positionValues = zip vals positions
         validateSortingNetwork (cexIdx + 1, cexOffset + fromIntegral (n * (d+1))) 
             {-
@@ -109,7 +109,7 @@ findCounterexampleRun network = runSolver $ do
         -- let positions = [ minBound .. maxBound ] :: [CexRun]
         -- vals <- assignments id positions
         -- let positionValues = zip vals positions
-        counterexampleInput <- assignments Value_ inputValues
+        counterexampleInput <- assignments value_ inputValues
         pure $ Just
             {-
             $ trace (
