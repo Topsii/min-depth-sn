@@ -1,6 +1,7 @@
 {-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 module MinDepthSN.SAT.Synthesis.ConstraintsBZ where
@@ -9,20 +10,17 @@ import Prelude hiding (negate)
 import Data.Word (Word32)
 import Data.Ix
 import Data.Enum (succeeding, between)
-import SAT.IPASIR (Lit, negate, polarize, lit)
-import MinDepthSN.SAT.Synthesis.VarsBZ (NetworkSynthesis(Value_))
+import SAT.IPASIR (Lit(..), negate, polarize)
 import MinDepthSN.SAT.Constraints 
     ( fixGateOrUnused
+    , iffDisjunctionOf
     , litImplies
     , exactlyOneOf
     , noneOf
     )
-import MinDepthSN.Data.Value (Value, inputValues, outputValues)
-import MinDepthSN.Data.GateOrUnused (GateOrUnused(..), gateOrUnusedLit)
-import MinDepthSN.Data.Unused (unusedLit)
-import MinDepthSN.Data.Gate (gateLit, KnownNetType)
-import MinDepthSN.Data.Size (Layer, Channel, channels, layers, n)
-import Data.List (sort)
+import MinDepthSN.Data.Window ( windowBounds )
+import MinDepthSN.Vars
+import Data.List (genericDrop, sort)
 
 
 -- | Each channel \(i\) is either compared with some channel \(j\) or not 
@@ -64,16 +62,26 @@ usage = concat
     ]
   where
     usagesOfChan :: Channel -> [GateOrUnused t] -> [Lit (NetworkSynthesis t)]
-    usagesOfChan i = map lit . filter (usesChannel i)
+    usagesOfChan i = map (PosLit . gateOrUnused_) . filter (usesChannel i)
     gatesInLayer :: Layer -> [GateOrUnused t]
     gatesInLayer k = range ( GateOrUnused minBound minBound k  -- can be improved
                            , GateOrUnused maxBound maxBound k)
     usesChannel :: Channel -> GateOrUnused t -> Bool
     usesChannel l (GateOrUnused i j _k) = i == l || j == l
 
-ifThenElse :: Bool -> a -> a -> a
-ifThenElse True t _ = t
-ifThenElse False _ f = f
+-- gates between adjacent channels and ranges up to a single channel are already
+-- mapped to the same DIMACS value. Thus they are skipped here
+usageOfOneInUpTo :: [[Lit (NetworkSynthesis 'Standard)]]
+usageOfOneInUpTo = concat $
+    [ PosLit (toOneInUpTo_ t) `iffDisjunctionOf` [gateLit l j k | l <- range (i, pred j)]
+    | t@(ToOneInUpTo i j k) <- [ minBound .. maxBound ] 
+    , not $ areAdjacent i j
+    ] ++
+    [ PosLit (fromOneInUpTo_ f) `iffDisjunctionOf` [gateLit i l k | l <- range (succ i, j)]
+    | f@(FromOneInUpTo i j k) <- [ minBound .. maxBound ]
+    , not $ areAdjacent i j
+    ]
+
 
 -- | The first layer is maximal (cf. Bundala and Zavodny "A layer \(L\) is 
 -- called maximal if no more comparators can be added into \(L\)."). Hence there
@@ -124,40 +132,61 @@ maximalFirstLayer
 update :: forall t. KnownNetType t => Word32 -> [[Lit (NetworkSynthesis t)]]
 update cexOffset = concat
     [-- TODO: replace (map . map . fmap) by fmap for a CNF datatype like: data CNF a = CNF [[Lit a]] deriving Functor
-        gateOrUnusedLit i j k `litImplies` (map . map . fmap) (Value_ cexOffset) (fixGateOrUnused (GateOrUnused i j k :: GateOrUnused t))
-    | GateOrUnused i j k <- [ minBound .. maxBound ] :: [GateOrUnused t]
+       PosLit (gateOrUnused_ gu) `litImplies` (map . map . fmap) (\v -> v cexOffset) (fixGateOrUnused gu)
+    | gu <- [ minBound .. maxBound ] :: [GateOrUnused t]
     ]
 
+updateEM :: Word32 -> (Channel, Channel) -> [[Lit (NetworkSynthesis 'Standard)]]
+updateEM cexOffset (l, u) = concat
+    [ concat
+        [ PosLit (gate_ g) `litImplies` fixGate g
+        | g <- [ minBound .. maxBound ]
+        ]
+    , 
+        [ [ toOneInUpToLit l j k, inp j k, -outp j k ] -- not toOneInUpToLit implies j is min channel or unused
+        | j <- range (succ l, u)
+        , k <- layers
+        ]
+    , 
+        [ [ fromOneInUpToLit i u k, -inp i k, outp i k ] -- not fromOneInUpToLit implies i is max channel or unused
+        | i <- range (l, pred u)
+        , k <- layers
+        ]
+    ,   [ [ inp l k, -outp l k ] -- l (first channel) is min channel or unused
+        | k <- layers
+        ]
+    ,   [ [ -inp u k, outp u k ] -- u (last channel) is max channel or unused
+        | k <- layers
+        ]
+    ]
+  where
+    fixGate :: KnownNetType t => Gate t -> [[Lit (NetworkSynthesis t)]]
+    fixGate g = case g of
+        Gate i j k -> 
+            [ [ outp i k, -inp j k, -inp i k ]
+            , [-outp i k, inp j k ]
+            , [-outp j k, inp j k, inp i k ]
+            , [ outp j k,-inp i k ]
+            ]
+    inp, outp :: Channel -> Layer -> Lit (NetworkSynthesis t)
+    inp  i k = PosLit (Value i (before k) cexOffset)
+    outp i k = PosLit (Value i (after  k) cexOffset)
 
--- -- improved update constraints that enable more propagations by Thorsten Ehlers and Mike Müller
--- sortsEM :: forall t. KnownNetType t => Word32 -> [Bool] -> [[Lit (NetworkSynthesis t)]]
--- sortsEM cexIdx counterexample = concat
---     [ zipWith fixValue counterexample inputValues
---     , updateEM (firstChannel, lastChannel) cexIdx
---     , zipWith fixValue (sort counterexample) outputValues
---     ]
---   where
---     fixValue :: Bool -> Value -> [Lit (NetworkSynthesis t)]
---     fixValue polarity val = [polarize polarity (cexIdx, val)]
-
--- updateEM :: forall t. KnownNetType t => Word32 -> (Channel, Channel) -> [[Lit (NetworkSynthesis)]]
--- updateEM cexIdx (l,h) = concat
---     [ 
---     | Gate i j k
---     ]
---   where
---     fixGateOrUnused :: KnownNetType t => GateOrUnused t -> [[Lit Value]]
---     fixGateOrUnused (GateOrUnused i j k) =
---         minimum [in1, in2] outMin ++ maximum [in1, in2] outMax
---     where
---         beforeK, afterK :: BetweenLayers
---         beforeK = before k
---         afterK = after k
---         in1, in2, outMin, outMax :: Lit Value
---         in1 = valueLit i beforeK
---         in2 = valueLit j beforeK
---         outMin = valueLit i afterK
---         outMax = valueLit j afterK
+-- improved update constraints that enable more propagations by Thorsten Ehlers and Mike Müller
+sortsEM :: Word32 -> [Bool] -> [[Lit (NetworkSynthesis 'Standard)]]
+sortsEM cexOffset counterexample = concat
+    [ zipWith fixValue cexFromL $ map value_ $ range (Value l beforeFirstLayer, Value u beforeFirstLayer)
+    , updateEM cexOffset (l, u)
+    , zipWith fixValue (sort cexFromL) $ map value_ $ range (Value l afterLastLayer, Value u afterLastLayer)
+    ]
+  where
+    l, u :: Channel
+    -- (l, u) = (firstChannel, lastChannel)
+    (l, u) = windowBounds counterexample
+    cexFromL :: [Bool]
+    cexFromL = genericDrop l counterexample
+    fixValue :: Bool -> (Word32 -> NetworkSynthesis t) -> [Lit (NetworkSynthesis t)]
+    fixValue polarity mkVal = [polarize polarity (mkVal cexOffset)]
 
 sorts :: forall t. KnownNetType t => Word32 -> [Bool] -> [[Lit (NetworkSynthesis t)]]
 sorts cexOffset counterexample = concat
@@ -166,13 +195,13 @@ sorts cexOffset counterexample = concat
     , zipWith fixValue (sort counterexample) outputValues
     ]
   where
-    fixValue :: Bool -> Value -> [Lit (NetworkSynthesis t)]
-    fixValue polarity val = [polarize polarity (cexOffset, val)]
+    fixValue :: Bool -> (Word32 -> NetworkSynthesis t) -> [Lit (NetworkSynthesis t)]
+    fixValue polarity mkVal = [polarize polarity (mkVal cexOffset)]
 
 -- for generalized networks
 -- behavior on unused not implemented
 -- not (yet?) correct!!!
-representativesOfBzIsomorphicEqClasses :: KnownNetType t => [[Lit (NetworkSynthesis t)]]
+representativesOfBzIsomorphicEqClasses :: [[Lit (NetworkSynthesis 'Generalized)]]
 representativesOfBzIsomorphicEqClasses = concat
     [ 
         let predK = pred k 

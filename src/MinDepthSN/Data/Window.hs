@@ -30,7 +30,7 @@ trailingOnes = length . takeWhile id . reverse
 
 windowBounds :: [Bool] -> (Channel, Channel)
 windowBounds input
-    | isSorted input = (1, 0) -- ill defined
+    | isSorted input = error "sorted input has no window" -- (1, 0) -- ill defined
     | otherwise = (l, h)
   where
     l = fromIntegral $ leadingZeroes input

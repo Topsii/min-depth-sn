@@ -7,15 +7,32 @@ module MinDepthSN.SAT.CexRun.Constraints where
 import Prelude hiding (negate)
 import Data.List (inits, tails)
 import Data.Enum (succeeding)
-import SAT.IPASIR (Lit(..), negate)
+import SAT.IPASIR (assignments, solveCNFs, SolveResult(..), runSolver, Lit(..), negate)
 import MinDepthSN.SAT.Constraints (fixGateOrUnused)
-import MinDepthSN.SAT.CexRun.Variables (CexRun(..))
-import MinDepthSN.Data.Size (channels, afterLastLayer)
-import MinDepthSN.Data.Value (outputValues, valueLit)
-import MinDepthSN.Data.GateOrUnused (GateOrUnused)
-import MinDepthSN.Data.Gate (KnownNetType)
---findCounterEx :: [Gate]
---findCounterEx = undefined
+import MinDepthSN.Vars
+
+-- find a counterexample run where some input is not sorted
+findCounterexampleRun :: KnownNetType t => [GateOrUnused t] -> Maybe [Bool] -- unnecessary KnownNetType constraint?
+findCounterexampleRun network = runSolver $ do
+    s <- solveCNFs [fixNetwork network, unsortedOutput]
+    case s of
+        Unsatisfiable -> pure Nothing
+        Satisfiable   -> do
+        -- let positions = [ minBound .. maxBound ] :: [CexRun]
+        -- vals <- assignments id positions
+        -- let positionValues = zip vals positions
+            counterexampleInput <- assignments value_ inputValues
+            pure $ Just
+                {-
+                $ trace (
+                    let sameLayer (GateOrUnused _ _ k) (GateOrUnused _ _ l) = k == l
+                        sameLayer _ _ = error ""
+                        sameLayer' (_,(Value _ k)) (_,(Value _ l)) = k == l
+                        sameLayer' _ _ = error ""
+                    in (unlines . map show $ groupBy sameLayer network) ++ "\n"
+                    ++ (unlines . map show $ groupBy sameLayer' positionValues) ++ "\n")
+                -}
+                counterexampleInput
 
 
 -- | The output of the network is sorted.
@@ -56,11 +73,10 @@ sortedOutput =
 unsortedOutput :: [[Lit CexRun]]
 unsortedOutput = zipWith (++) (inits outputOnes) (tails outputZeros)
   where
-    outputZeros, outputOnes ::  [Lit CexRun]
-    outputZeros = map (NegLit . CexRun) outputValues
-    outputOnes  = map (PosLit . CexRun) outputValues
+    outputZeros, outputOnes :: [Lit CexRun]
+    outputZeros = map NegLit outputValues
+    outputOnes  = map PosLit outputValues
 
 -- | See 'MinDepthSN.SAT.Constraints.fixGateOrUnused'.
 fixNetwork :: KnownNetType t => [GateOrUnused t] -> [[Lit CexRun]]
--- TODO: replace (map . map . fmap) by fmap for a CNF datatype like: data CNF a = CNF [[Lit a]] deriving Functor
-fixNetwork = concatMap ((map . map . fmap) CexRun . fixGateOrUnused)
+fixNetwork = concatMap fixGateOrUnused

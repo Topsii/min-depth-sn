@@ -9,11 +9,7 @@ import Prelude hiding (negate, maximum, minimum)
 import Data.List (nub)
 import Data.Pair.UnorderedNoDuplicates (zipWithSuccs)
 import SAT.IPASIR (Lit(..), negate)
-import MinDepthSN.Data.Size (Layer, Channel, BetweenLayers, before, after)
-import MinDepthSN.Data.Value (Value(..))
-import MinDepthSN.Data.GateOrUnused (GateOrUnused(..))
-import MinDepthSN.Data.Gate (Gate(..), KnownNetType)
-import MinDepthSN.Data.Unused (Unused(..))
+import MinDepthSN.Vars
 
 
 -- | @fixGateOrUnused (GateOrUnused i j k)@ either compares the values on the 
@@ -36,18 +32,15 @@ import MinDepthSN.Data.Unused (Unused(..))
 -- \]
 -- See 'iff', 'iffDisjunctionOf' and 'iffConjunctionOf' for the CNF.
 --
-fixGateOrUnused :: KnownNetType t => GateOrUnused t -> [[Lit Value]]
+fixGateOrUnused :: forall t v. (ValueAs v, KnownNetType t) => GateOrUnused t -> [[Lit v]]
 fixGateOrUnused gu = case gu of
-    Gate_   (Gate i j k) -> outp i k `iffConjunctionOf` [inp i k, inp j k]
+    Gate i j k -> outp i k `iffConjunctionOf` [inp i k, inp j k]
                          ++ outp j k `iffDisjunctionOf` [inp i k, inp j k]
-    Unused_ (Unused i k) -> outp i k `iff`               inp i k
+    Unused i k -> outp i k `iff`               inp i k
   where
-    inp, outp :: Channel -> Layer -> Lit Value
+    inp, outp :: Channel -> Layer -> Lit v
     inp  i k = valueLit i (before k)
     outp i k = valueLit i (after  k)
-
-valueLit :: Channel -> BetweenLayers -> Lit Value
-valueLit i k = PosLit $ Value i k
 
 -- | \(l_{c}\)@ \`iffConjunctionOf\` [@\(l_0\)@,@\(l_1\)@,@\(\dots\)@,@\(l_k\)@]@
 -- ensures that in a satisfying assignment the value of literal \(l_{c}\) is

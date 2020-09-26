@@ -11,9 +11,11 @@
 module SAT.IPASIR
     ( Solver
     , runSolver
-    -- * Add clauses and solve
+    -- * Adding clauses
     , addClause
     , addClauses
+    -- * Solving
+    , SolveResult(..)
     , solve
     , solveCNF
     , solveCNFs
@@ -24,10 +26,7 @@ module SAT.IPASIR
     , trueAssigned
     , falseAssigned
     -- * Variables
-    , AsVar(..)
     , Var(..)
-    -- * Literals
-    , lit
     , polarize
     , SAT.IPASIR.negate
     , Lit(..)
@@ -43,6 +42,10 @@ import Foreign.C.Types (CInt)
 import SAT.IPASIR.Bindings hiding (Solver, runSolver)
 import qualified SAT.IPASIR.Bindings as IPASIR
 import Control.Monad.Primitive
+
+
+data SolveResult = Satisfiable | Unsatisfiable
+    deriving stock (Eq,Show)
 
 -- newtype Solver
 -- ensure correct state: input/sat/unsat
@@ -76,22 +79,16 @@ negate = \case
     PosLit variable -> NegLit variable
     NegLit variable -> PosLit variable
 
-class Dimacs v => AsVar v a where
-    var :: a -> v
-
-lit :: AsVar v a => a -> Lit v
-lit = PosLit . var
-
 -- perhaps a bad name, since another use of the term polarity is:
 -- The polarity determines wether a variable is first 
 -- assigned true (positive polarity) or false (negative polarity)
 -- wouldn't it be ideal to rename this to lit and have unary prefix operators:
 -- (-) :: a -> Lit v
 -- (+) :: a -> Lit v
-polarize :: AsVar v a => Bool -> a -> Lit v
+polarize :: Bool -> v -> Lit v
 polarize = \case
-    True  -> PosLit . var
-    False -> NegLit . var
+    True  -> PosLit
+    False -> NegLit
 
 -- | @fromDIMACS 0@ is undefined, otherwise it holds:
 --
@@ -147,27 +144,31 @@ addClause literals = mapM_ addLiteral literals >> finalizeClause
 addClauses :: Dimacs v => [[Lit v]] -> Solver s v ()
 addClauses = mapM_ addClause
 
-solve :: Dimacs v => Solver s v Bool
-solve = Solver ipasirSolve
+solve :: Dimacs v => Solver s v SolveResult
+solve = toSolveResult <$> Solver ipasirSolve
+  where
+    toSolveResult :: Bool -> SolveResult
+    toSolveResult r = if r then Satisfiable else Unsatisfiable
 
-solveCNF :: Dimacs v => [[Lit v]] -> Solver s v Bool
+
+solveCNF :: Dimacs v => [[Lit v]] -> Solver s v SolveResult
 solveCNF clauses = addClauses clauses >> solve
 
 -- | Solves a conjunction of cnf formulas.
-solveCNFs :: Dimacs v => [[[Lit v]]] -> Solver s v Bool
+solveCNFs :: Dimacs v => [[[Lit v]]] -> Solver s v SolveResult
 solveCNFs cnfs =  mapM_ addClauses cnfs >> solve
 
-isTrueAssigned :: forall s v a. AsVar v a => a -> Solver s v Bool
-isTrueAssigned = Solver . ipasirVal . toDIMACS . (var :: a -> v)
+isTrueAssigned :: Dimacs v => (a -> v) -> a -> Solver s v Bool
+isTrueAssigned var = Solver . ipasirVal . toDIMACS . var
 
-isFalseAssigned :: AsVar v a =>  a -> Solver s v Bool
-isFalseAssigned literal = not <$> isTrueAssigned literal
+isFalseAssigned :: Dimacs v => (a -> v) -> a -> Solver s v Bool
+isFalseAssigned var x = not <$> (isTrueAssigned var) x
 
-assignments :: AsVar v a => [a] -> Solver s v [Bool]
-assignments = mapM isTrueAssigned
+assignments :: Dimacs v => (a -> v) -> [a] -> Solver s v [Bool]
+assignments = mapM . isTrueAssigned 
 
-trueAssigned :: AsVar v a => [a] -> Solver s v [a]
-trueAssigned = filterM isTrueAssigned
+trueAssigned :: Dimacs v => (a -> v) -> [a] -> Solver s v [a]
+trueAssigned = filterM . isTrueAssigned
 
-falseAssigned :: AsVar v a => [a] -> Solver s v [a]
-falseAssigned = filterM isFalseAssigned
+falseAssigned :: Dimacs v => (a -> v) -> [a] -> Solver s v [a]
+falseAssigned = filterM . isFalseAssigned 
