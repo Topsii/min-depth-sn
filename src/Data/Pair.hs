@@ -9,7 +9,7 @@
 {-# LANGUAGE PolyKinds #-}
 
 module Data.Pair
-    ( Pair(Pair, ..)
+    ( Pair(Pair)
     , Order(..)
     , Duplicates(..)
     ) where
@@ -53,22 +53,22 @@ deriving stock instance Ord a => Ord (Pair o d a)
 deriving stock instance Show a => Show (Pair o d a)
 
 instance Ix a => Ix (Pair o d a) where
-    range (MkUnorNoDup l, MkUnorNoDup h) = map MkUnorNoDup $ range (l,h)
-    range (MkOrdeNoDup l, MkOrdeNoDup h) = map MkOrdeNoDup $ range (l,h)
-    range (MkUnorWiDup l, MkUnorWiDup h) = map MkUnorWiDup $ range (l,h)
-    range (MkOrdeWiDup l, MkOrdeWiDup h) = map MkOrdeWiDup $ range (l,h)
-    index (MkUnorNoDup l, MkUnorNoDup h) (MkUnorNoDup x) = index (l,h) x
-    index (MkOrdeNoDup l, MkOrdeNoDup h) (MkOrdeNoDup x) = index (l,h) x
-    index (MkUnorWiDup l, MkUnorWiDup h) (MkUnorWiDup x) = index (l,h) x
-    index (MkOrdeWiDup l, MkOrdeWiDup h) (MkOrdeWiDup x) = index (l,h) x
-    inRange (MkUnorNoDup l, MkUnorNoDup h) (MkUnorNoDup x) = inRange (l,h) x
-    inRange (MkOrdeNoDup l, MkOrdeNoDup h) (MkOrdeNoDup x) = inRange (l,h) x
-    inRange (MkUnorWiDup l, MkUnorWiDup h) (MkUnorWiDup x) = inRange (l,h) x
-    inRange (MkOrdeWiDup l, MkOrdeWiDup h) (MkOrdeWiDup x) = inRange (l,h) x
-    rangeSize (MkUnorNoDup l, MkUnorNoDup h) = rangeSize (l,h)
-    rangeSize (MkOrdeNoDup l, MkOrdeNoDup h) = rangeSize (l,h)
-    rangeSize (MkUnorWiDup l, MkUnorWiDup h) = rangeSize (l,h)
-    rangeSize (MkOrdeWiDup l, MkOrdeWiDup h) = rangeSize (l,h)
+    range (MkUnorNoDup l, MkUnorNoDup u) = map MkUnorNoDup $ range (l,u)
+    range (MkOrdeNoDup l, MkOrdeNoDup u) = map MkOrdeNoDup $ range (l,u)
+    range (MkUnorWiDup l, MkUnorWiDup u) = map MkUnorWiDup $ range (l,u)
+    range (MkOrdeWiDup l, MkOrdeWiDup u) = map MkOrdeWiDup $ range (l,u)
+    index (MkUnorNoDup l, MkUnorNoDup u) (MkUnorNoDup x) = index (l,u) x
+    index (MkOrdeNoDup l, MkOrdeNoDup u) (MkOrdeNoDup x) = index (l,u) x
+    index (MkUnorWiDup l, MkUnorWiDup u) (MkUnorWiDup x) = index (l,u) x
+    index (MkOrdeWiDup l, MkOrdeWiDup u) (MkOrdeWiDup x) = index (l,u) x
+    inRange (MkUnorNoDup l, MkUnorNoDup u) (MkUnorNoDup x) = inRange (l,u) x
+    inRange (MkOrdeNoDup l, MkOrdeNoDup u) (MkOrdeNoDup x) = inRange (l,u) x
+    inRange (MkUnorWiDup l, MkUnorWiDup u) (MkUnorWiDup x) = inRange (l,u) x
+    inRange (MkOrdeWiDup l, MkOrdeWiDup u) (MkOrdeWiDup x) = inRange (l,u) x
+    rangeSize (MkUnorNoDup l, MkUnorNoDup u) = rangeSize (l,u)
+    rangeSize (MkOrdeNoDup l, MkOrdeNoDup u) = rangeSize (l,u)
+    rangeSize (MkUnorWiDup l, MkUnorWiDup u) = rangeSize (l,u)
+    rangeSize (MkOrdeWiDup l, MkOrdeWiDup u) = rangeSize (l,u)
 
 instance (Typeable o, Typeable d, Bounded a, Enum a, Ord a) => Enum (Pair o d a) where
     fromEnum (MkUnorNoDup x) = fromEnum x

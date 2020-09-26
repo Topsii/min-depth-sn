@@ -40,5 +40,5 @@ instance Ix a => Ix (OrderedWithDuplicates a) where
         aSize = rangeSize $ extendBounds b
 
 extendBounds :: Ord a => (OrderedWithDuplicates a, OrderedWithDuplicates a) -> (a, a)
-extendBounds (OrderedWithDuplicates x1 y1, OrderedWithDuplicates x2 y2) =
-    (min x1 y1, max x2 y2)
+extendBounds (OrderedWithDuplicates l1 l2, OrderedWithDuplicates u1 u2) =
+    (min l1 l2, max u1 u2)

@@ -49,8 +49,8 @@ instance Ix a => Ix (UnorderedNoDuplicates a) where
         aSize = rangeSize $ extendBounds b
 
 extendBounds :: Ord a => (UnorderedNoDuplicates a, UnorderedNoDuplicates a) -> (a, a)
-extendBounds (UnorderedNoDuplicates x1 y1, UnorderedNoDuplicates x2 y2) =
-    (min x1 y1, max x2 y2)
+extendBounds (UnorderedNoDuplicates l1 l2, UnorderedNoDuplicates u1 u2) =
+    (min l1 l2, max u1 u2)
 
 toTriangular :: Int -> Int
 toTriangular n = (n * (n + 1)) `div` 2

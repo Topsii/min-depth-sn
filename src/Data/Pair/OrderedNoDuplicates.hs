@@ -47,8 +47,8 @@ instance Ix a => Ix (OrderedNoDuplicates a) where
         aSize = rangeSize $ extendBounds b
 
 extendBounds :: Ord a => (OrderedNoDuplicates a, OrderedNoDuplicates a) -> (a, a)
-extendBounds (OrderedNoDuplicates x1 y1, OrderedNoDuplicates x2 y2) =
-    (min x1 y1, max x2 y2)
+extendBounds (OrderedNoDuplicates l1 l2, OrderedNoDuplicates u1 u2) =
+    (min l1 l2, max u1 u2)
 
 instance (Bounded a, Enum a, Eq a) => Enum (OrderedNoDuplicates a) where
     fromEnum (OrderedNoDuplicates x1 x2) =
