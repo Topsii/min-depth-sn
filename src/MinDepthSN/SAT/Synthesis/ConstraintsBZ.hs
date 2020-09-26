@@ -11,7 +11,6 @@ import Data.Word (Word32)
 import Data.Ix
 import Data.Enum (succeeding, between)
 import SAT.IPASIR (Lit(..), negate, polarize)
--- import MinDepthSN.SAT.Synthesis.VarsBZ (NetworkSynthesis(Value_))
 import MinDepthSN.SAT.Constraints 
     ( fixGateOrUnused
     , iffDisjunctionOf
@@ -19,8 +18,9 @@ import MinDepthSN.SAT.Constraints
     , exactlyOneOf
     , noneOf
     )
+import MinDepthSN.Data.Window ( windowBounds )
 import MinDepthSN.Vars
-import Data.List (sort)
+import Data.List (genericDrop, sort)
 
 
 -- | Each channel \(i\) is either compared with some channel \(j\) or not 
@@ -175,13 +175,16 @@ updateEM cexOffset (l, u) = concat
 -- improved update constraints that enable more propagations by Thorsten Ehlers and Mike Müller
 sortsEM :: Word32 -> [Bool] -> [[Lit (NetworkSynthesis 'Standard)]]
 sortsEM cexOffset counterexample = concat
-    [ zipWith fixValue counterexample $ map value_ $ range (Value l beforeFirstLayer, Value u beforeFirstLayer)
+    [ zipWith fixValue cexFromL $ map value_ $ range (Value l beforeFirstLayer, Value u beforeFirstLayer)
     , updateEM cexOffset (l, u)
-    , zipWith fixValue (sort counterexample) $ map value_ $ range (Value l afterLastLayer, Value u afterLastLayer)
+    , zipWith fixValue (sort cexFromL) $ map value_ $ range (Value l afterLastLayer, Value u afterLastLayer)
     ]
   where
     l, u :: Channel
-    (l, u) = (firstChannel, lastChannel)
+    -- (l, u) = (firstChannel, lastChannel)
+    (l, u) = windowBounds counterexample
+    cexFromL :: [Bool]
+    cexFromL = genericDrop l counterexample
     fixValue :: Bool -> (Word32 -> NetworkSynthesis t) -> [Lit (NetworkSynthesis t)]
     fixValue polarity mkVal = [polarize polarity (mkVal cexOffset)]
 
