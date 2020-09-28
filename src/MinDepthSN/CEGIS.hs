@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE GADTs #-}
 
-module MinDepthSN.CEGIS where
+module MinDepthSN.CEGIS (main) where
 import Debug.Trace
 import Data.List
 import SAT.IPASIR
@@ -19,7 +19,10 @@ import Data.Typeable (eqT)
 
 main :: IO ()
 -- main = print $ runSolver (addClauses minimalRepresentative >> solve)
-main = print (networkSolution :: Either [Bool] [GateOrUnused 'Standard])
+main = do
+    putStrLn $ "n: " ++ show n
+    putStrLn $ "d: " ++ show d
+    print (networkSolution ) -- :: Either [Bool] [GateOrUnused 'Standard])
 
 
 sorts' :: forall t. KnownNetType t => Word32 -> [Bool] -> [[Lit (NetworkSynthesis t)]]
@@ -35,7 +38,7 @@ usageOfOneInUpTo' = case eqT :: Maybe (t :~: 'Standard) of
     Nothing   -> []
 
 
-networkSolution :: forall t. KnownNetType t => Either [Bool] [GateOrUnused t]
+networkSolution :: Either [Bool] [GateOrUnused 'Standard]
 networkSolution = runSolver $ do
 
     -- add mandatory initial constraints
@@ -44,11 +47,16 @@ networkSolution = runSolver $ do
     addClauses usageOfOneInUpTo'
     --addClauses representativesOfBzIsomorphicEqClasses
 
+    -- addClauses toBetweenBeforeConstr
+    -- addClauses viaWrongTwistConstr
+    -- addClauses $ breakParallelGates Earliest
+    -- addClauses breakInpTwists
+
     -- possibly add initial counterexample constraints
-    let initCexCnt = 0
+    let initCexCnt = 1550
     let initCexs = take initCexCnt . prioritizeSmallWindows $ inputs
     let (cxData, sortsCexs) = mapAccumR (\(cIdx, cOffset) cx -> ((cIdx + 1, cOffset + fromIntegral (n * (d+1))), sorts' cOffset cx)) (0 :: Word32, 0) initCexs
-    addClauses (concat sortsCexs)
+    addClauses $ concat sortsCexs
 
     -- start cegis
     -- actually synthesizeSortingNetwork should be called here but we lack a cex if initCexCnt = 0

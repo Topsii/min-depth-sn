@@ -82,6 +82,122 @@ usageOfOneInUpTo = concat $
     , not $ areAdjacent i j
     ]
 
+toBetweenBeforeConstr :: [[Lit (NetworkSynthesis 'Standard)]]
+toBetweenBeforeConstr = concat $
+    [ defineToBetweenBefore tbb | tbb <- [ minBound .. maxBound ] ]
+  where
+    defineToBetweenBefore :: ToBetweenBefore -> [[Lit (NetworkSynthesis 'Standard)]]
+    defineToBetweenBefore tbb@(ToBetweenBefore i j k) = case k of
+        0 -> [[ NegLit $ toBetweenBefore_ tbb ]] 
+        _ -> PosLit (toBetweenBefore_ tbb) `iffDisjunctionOf`
+                [ toBetweenBeforeLit i j (pred k)
+                , fromOneInUpToLit i j k
+                , toOneInUpToLit i j k
+                ]
+
+viaWrongTwistConstr :: [[Lit (NetworkSynthesis 'Standard)]]
+viaWrongTwistConstr = concat $
+    [ defineViaWrongTwist vwt | vwt <- [ minBound .. maxBound ] ]
+  where
+    defineViaWrongTwist :: ViaWrongTwist -> [[Lit (NetworkSynthesis 'Standard)]]
+    defineViaWrongTwist vwt@(ViaWrongTwist p o k) = case k of
+        0 -> [[ NegLit $ viaWrongTwist_ vwt ]] -- should (hopefully!) be irrelevant
+        _ -> [
+                [ PosLit (viaWrongTwist_ vwt)
+                , toBetweenBeforeLit i j k
+                , -gateLit (min i o) (max i o) (pred k)
+                , -gateLit (min j p) (max j p) (pred k)
+                , NegLit (gate_ g)
+                ]
+            | g@(Gate i j _k) <- range ( Gate minBound maxBound k, Gate minBound maxBound k)
+            , i /= o
+            , i /= p
+            , j /= o
+            , j /= p
+            ]
+
+data ParGatesLayer
+    = Earliest -- ^ Move every gate to the earliest layer possible
+    | Latest   -- ^ Move every gate to the latest layer possible
+    
+breakParallelGates :: ParGatesLayer -> [[Lit (NetworkSynthesis 'Standard)]]
+breakParallelGates pgl = 
+    [ 
+        [ -unusedLit i uk
+        , -unusedLit j uk
+        , - gateLit i j gk
+        ]
+    | k <- succeeding (0 :: Layer)   
+    , let (uk, gk) = case pgl of
+            Earliest -> (pred k, k)
+            Latest   -> (k, pred k)
+    , i <- channels
+    , j <- succeeding i
+    ]
+
+breakInpTwists :: [[Lit (NetworkSynthesis 'Standard)]]
+breakInpTwists =
+    concat
+        [ breakInpTwist g | g <- [ minBound .. maxBound ]] 
+    ++
+    concat
+        [ breakWrongTwist vwt | vwt <- [ minBound .. maxBound ] ]
+  where
+    breakInpTwist :: Gate 'Standard -> [[Lit (NetworkSynthesis 'Standard)]]
+    breakInpTwist g@(Gate i j k) = case k of
+        0 -> []
+        _ -> [ 
+                [ NegLit (gate_ g)
+                , toBetweenBeforeLit i j k
+                , -unusedLit i (pred k) -- fixed line
+                -- , unusedLit j (pred k) -- rather twist such that the used channel is i.. we don't really know whether both channels or only one of them is used in layer (pred k)
+                ]
+             ] -- ++
+    breakWrongTwist :: ViaWrongTwist -> [[Lit (NetworkSynthesis 'Standard)]]
+    breakWrongTwist vwt@(ViaWrongTwist p o k) = case k of
+        0 -> [] -- ViaWrongTwist p o 0 is always negative
+        _ -> [ NegLit $ viaWrongTwist_ vwt
+             , unusedLit o k
+             , unusedLit p k
+             ] :
+             [
+                 [ NegLit $ viaWrongTwist_ vwt
+                 , -gateLit (min o q) (max o q) k
+                 , unusedLit p k
+                 ] 
+             | q <- channels
+             , q /= o
+             , q /= p
+             , min q o > p
+             ] ++
+             [
+                 [ NegLit $ viaWrongTwist_ vwt
+                 , unusedLit o k
+                 , -gateLit (min p r) (max p r) k
+                 ] 
+             | r <- channels
+             , r /= o
+             , r /= p
+             , o > min r p
+             ] ++
+             [
+                 [ NegLit $ viaWrongTwist_ vwt
+                 , unusedLit o k
+                 , -gateLit (min p r) (max p r) k
+                 ] 
+             | q <- channels
+             , q /= o
+             , q /= p
+             , r <- channels
+             , r /= o
+             , r /= p
+             , min q o > min r p
+             , q /= p
+             , r /= o
+             ] 
+             
+             
+
 
 -- | The first layer is maximal (cf. Bundala and Zavodny "A layer \(L\) is 
 -- called maximal if no more comparators can be added into \(L\)."). Hence there

@@ -53,6 +53,16 @@ module MinDepthSN.Vars
     , fromOneInUpTo_
     , toOneInUpToLit
     , fromOneInUpToLit
+    -- * ToBetweenBefore
+    , ToBetweenBefore ( ToBetweenBefore )
+    , ToBetweenBeforeAs(..)
+    , toBetweenBefore_
+    , toBetweenBeforeLit
+    -- * ViaWrongTwist
+    , ViaWrongTwist ( ViaWrongTwist )
+    , ViaWrongTwist(..)
+    , viaWrongTwist_
+    , viaWrongTwistLit
     -- * Value
     , Value ( Value )
     , ValueAs()
@@ -65,6 +75,8 @@ module MinDepthSN.Vars
         ( Gate
         , Unused
         , GateOrUnused
+        , ToBetweenBefore
+        , ViaWrongTwist
         , Value
         )
     -- * CexRun
@@ -346,6 +358,79 @@ toOneInUpToLit i j k = PosLit $ ToOneInUpTo i j k
 fromOneInUpToLit  :: (KnownNetType t, FromOneInUpToAs f) => Channel -> Channel -> Layer -> Lit (f t)
 fromOneInUpToLit i j k = PosLit $ FromOneInUpTo i j k
 
+
+-- #############################################################################
+-- #############################################################################
+
+data ToBetweenBefore 
+    = MkToBetweenBefore Layer (Pair 'Unordered 'NoDuplicates Channel)
+    deriving stock (Generic, Eq, Ord, Ix)
+    deriving Enum via FiniteEnumeration ToBetweenBefore
+    deriving Bounded via Generically ToBetweenBefore
+
+class ToBetweenBeforeAs a where
+    toBetwBefPrism :: Prism' a ToBetweenBefore
+
+instance ToBetweenBeforeAs ToBetweenBefore where
+    toBetwBefPrism :: Prism' ToBetweenBefore ToBetweenBefore
+    toBetwBefPrism = prism id Right
+
+{-# COMPLETE ToBetweenBefore :: ToBetweenBefore #-}
+pattern ToBetweenBefore :: (ToBetweenBeforeAs a) => Channel -> Channel -> Layer -> a
+pattern ToBetweenBefore i j k <- (preview toBetwBefPrism -> Just (MkToBetweenBefore k (Pair i j)))
+  where ToBetweenBefore i j k = toBetweenBefore_ $ MkToBetweenBefore k (Pair i j)
+
+toBetweenBefore_ :: ToBetweenBeforeAs a => ToBetweenBefore -> a
+toBetweenBefore_ = review toBetwBefPrism 
+
+instance Show ToBetweenBefore where
+    showsPrec p (ToBetweenBefore i j k) = showParen (p >= 11) $
+        showString "ToBetweenBefore " .
+        showsPrec 11 i . showChar ' ' .
+        showsPrec 11 j . showChar ' ' . 
+        showsPrec 11 k
+
+-- | Literal of 'ToBetweenBefore' with positive polarity.
+toBetweenBeforeLit :: ToBetweenBeforeAs a => Channel -> Channel -> Layer -> Lit a
+toBetweenBeforeLit i j k = PosLit $ ToBetweenBefore i j k
+
+
+-- #############################################################################
+-- #############################################################################
+
+data ViaWrongTwist
+    = MkViaWrongTwist Layer (Pair 'Ordered 'NoDuplicates Channel)
+    deriving stock (Generic, Eq, Ord, Ix)
+    deriving Enum via FiniteEnumeration ViaWrongTwist
+    deriving Bounded via Generically ViaWrongTwist
+
+class ViaWrongTwistAs a where
+    viaWrongTwistPrism :: Prism' a ViaWrongTwist
+
+instance ViaWrongTwistAs ViaWrongTwist where
+    viaWrongTwistPrism :: Prism' ViaWrongTwist ViaWrongTwist
+    viaWrongTwistPrism = prism id Right
+
+{-# COMPLETE ViaWrongTwist :: ViaWrongTwist #-}
+pattern ViaWrongTwist :: ViaWrongTwistAs a => Channel -> Channel -> Layer -> a
+pattern ViaWrongTwist i j k <- (preview viaWrongTwistPrism -> Just (MkViaWrongTwist k (Pair i j)))
+  where ViaWrongTwist i j k = viaWrongTwist_ $ MkViaWrongTwist k (Pair i j)
+
+viaWrongTwist_ :: ViaWrongTwistAs a => ViaWrongTwist -> a
+viaWrongTwist_ = review viaWrongTwistPrism 
+
+instance Show ViaWrongTwist where
+    showsPrec p (ViaWrongTwist i j k) = showParen (p >= 11) $
+        showString "ViaWrongTwist " .
+        showsPrec 11 i . showChar ' ' .
+        showsPrec 11 j . showChar ' ' . 
+        showsPrec 11 k
+
+-- | Literal of 'ViaWrongTwist' with positive polarity.
+viaWrongTwistLit :: ViaWrongTwistAs a => Channel -> Channel -> Layer -> Lit a
+viaWrongTwistLit i j k = PosLit $ ViaWrongTwist i j k
+
+
 -- #############################################################################
 -- #############################################################################
 
@@ -404,12 +489,14 @@ data NetworkSynthesis t
     = GU (GateOrUnused t)
     | TOIUT Layer (Pair.AbsDiffGT1 (AreGateChannelsOrdered t) Channel)
     | FOIUT Layer (Pair.AbsDiffGT1 (AreGateChannelsOrdered t) Channel)
+    | ToBetwBef ToBetweenBefore
+    | VWT ViaWrongTwist
     | Val Word32 Value
     deriving stock (Generic, Eq, Ord)
     deriving Enum via (FiniteEnumeration (NetworkSynthesis t))
 
-{-# COMPLETE ToOneInUpTo, FromOneInUpTo, Value, Gate, Unused :: NetworkSynthesis #-}
-{-# COMPLETE ToOneInUpTo, FromOneInUpTo, Value, GateOrUnused :: NetworkSynthesis #-}
+{-# COMPLETE ToOneInUpTo, FromOneInUpTo, ToBetweenBefore, ViaWrongTwist, Value, Gate, Unused :: NetworkSynthesis #-}
+{-# COMPLETE ToOneInUpTo, FromOneInUpTo, ToBetweenBefore, ViaWrongTwist, Value, GateOrUnused :: NetworkSynthesis #-}
 
 instance GateOrUnusedAs NetworkSynthesis where
     gateOrUnusedPrism :: Prism' (NetworkSynthesis t) (GateOrUnused t)
@@ -458,6 +545,28 @@ instance FromOneInUpToAs NetworkSynthesis where
             FOIUT k (Pair.AbsDiffGT1 i j ) -> Right $ FromOneInUpTo i j k
             _     -> Left ns
 
+instance ToBetweenBeforeAs (NetworkSynthesis t) where
+    toBetwBefPrism :: Prism' (NetworkSynthesis t) ToBetweenBefore
+    toBetwBefPrism = prism constructToBetwBef matchToBetwBef 
+      where
+        constructToBetwBef :: ToBetweenBefore -> NetworkSynthesis t
+        constructToBetwBef = ToBetwBef
+        matchToBetwBef :: NetworkSynthesis t -> Either (NetworkSynthesis t) ToBetweenBefore
+        matchToBetwBef ns = case ns of
+            ToBetwBef tbb -> Right tbb
+            _     -> Left ns
+
+instance ViaWrongTwistAs (NetworkSynthesis t) where
+    viaWrongTwistPrism :: Prism' (NetworkSynthesis t) ViaWrongTwist
+    viaWrongTwistPrism = prism constructViaWrongTwist matchViaWrongTwist 
+      where
+        constructViaWrongTwist :: ViaWrongTwist -> NetworkSynthesis t
+        constructViaWrongTwist = VWT
+        matchViaWrongTwist :: NetworkSynthesis t -> Either (NetworkSynthesis t) ViaWrongTwist
+        matchViaWrongTwist ns = case ns of
+            VWT vwt -> Right vwt
+            _     -> Left ns
+
 instance ValueAs (Word32 -> NetworkSynthesis t) where
     valuePrism :: Prism' (Word32 -> NetworkSynthesis t) Value
     valuePrism = prism constructOffVal matchOffVal
@@ -482,6 +591,8 @@ instance KnownNetType t => Show (NetworkSynthesis t) where
         GU gu -> showString "GateOrUnused_ " . showsPrec 11 gu
         ToOneInUpTo i j k -> showString "ToOneInUpTo_ " . showsPrec 11 (ToOneInUpTo i j k :: ToOneInUpTo t)
         FromOneInUpTo i j k -> showString "FromOneInUpTo_ " . showsPrec 11 (FromOneInUpTo i j k :: FromOneInUpTo t)
+        ToBetwBef tbb -> showString "ToBetweenBefore_ " . showsPrec 11 tbb
+        VWT vwt -> showString "ViaWrongTwist_ " . showsPrec 11 vwt
         Val cexIdx val -> showString "Value_ " . showsPrec 11 cexIdx . showChar ' ' . showsPrec 11 val
 
 instance KnownNetType t => Dimacs (NetworkSynthesis t) where

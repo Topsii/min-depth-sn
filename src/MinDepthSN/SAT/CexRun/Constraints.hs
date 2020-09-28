@@ -18,9 +18,9 @@ findCounterexampleRun network = runSolver $ do
     case s of
         Unsatisfiable -> pure Nothing
         Satisfiable   -> do
-        -- let positions = [ minBound .. maxBound ] :: [CexRun]
-        -- vals <- assignments id positions
-        -- let positionValues = zip vals positions
+            -- let positions = [ minBound .. maxBound ] :: [CexRun]
+            -- vals <- assignments id positions
+            -- let positionValues = zip vals positions
             counterexampleInput <- assignments value_ inputValues
             pure $ Just
                 {-
