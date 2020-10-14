@@ -9,6 +9,7 @@ import Debug.Trace
 import Data.List
 import SAT.IPASIR
 import MinDepthSN.SAT.Synthesis.ConstraintsBZ
+-- import MinDepthSN.SAT.Synthesis.End
 import MinDepthSN.SAT.CexRun.Constraints
 import MinDepthSN.Vars
 import MinDepthSN.Data.Window
@@ -32,28 +33,24 @@ sorts' = case eqT :: Maybe (t :~: 'Standard) of
         Just Refl -> sorts
         _         -> error "bad"
 
-usageOfOneInUpTo' :: forall t. KnownNetType t => [[Lit (NetworkSynthesis t)]]
-usageOfOneInUpTo' = case eqT :: Maybe (t :~: 'Standard) of
-    Just Refl -> usageOfOneInUpTo
-    Nothing   -> []
-
-
 networkSolution :: Either [Bool] [GateOrUnused 'Standard]
 networkSolution = runSolver $ do
 
     -- add mandatory initial constraints
     addClauses usage
+    addClauses usageOneInUpTo
     -- addClauses maximalFirstLayer
-    addClauses usageOfOneInUpTo'
-    --addClauses representativesOfBzIsomorphicEqClasses
+    addClauses oneInUpToConstr
 
     -- addClauses toBetweenBeforeConstr
     -- addClauses viaWrongTwistConstr
     -- addClauses $ breakParallelGates Earliest
     -- addClauses breakInpTwists
 
+    -- addClauses lastConstr
+
     -- possibly add initial counterexample constraints
-    let initCexCnt = 1550
+    let initCexCnt = 500
     let initCexs = take initCexCnt . prioritizeSmallWindows $ inputs
     let (cxData, sortsCexs) = mapAccumR (\(cIdx, cOffset) cx -> ((cIdx + 1, cOffset + fromIntegral (n * (d+1))), sorts' cOffset cx)) (0 :: Word32, 0) initCexs
     addClauses $ concat sortsCexs

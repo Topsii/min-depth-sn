@@ -26,6 +26,8 @@ module MinDepthSN.Data.Size
     , Layer
     , d
     , D
+    , firstLayer
+    , lastLayer
     , layers
     -- * BetweenLayers
     , BetweenLayers
@@ -145,6 +147,12 @@ lastChannel = maxBound
 channels :: [Channel]
 channels = [ minBound .. maxBound ]
 
+firstLayer :: Layer
+firstLayer = minBound
+
+lastLayer :: Layer
+lastLayer = maxBound
+
 layers :: [Layer]
 layers = [ minBound .. maxBound ]
 
@@ -155,10 +163,10 @@ after :: Layer -> BetweenLayers
 after (Layer k) = BetweenLayers $ shiftN k
 
 beforeFirstLayer :: BetweenLayers
-beforeFirstLayer = before minBound
+beforeFirstLayer = before firstLayer
 
 afterLastLayer :: BetweenLayers
-afterLastLayer = after maxBound
+afterLastLayer = after lastLayer
 
 afterLayers :: [BetweenLayers]
 afterLayers = map after layers
@@ -184,7 +192,7 @@ beforeLayers = map before layers
 -- timesTwoPlusOne = shift . fromJust . strengthen . timesTwo
 
 type N = 10
-type D = 7
+type D = 6
 
 -- gatesInLayer :: [GateInLayer]
 -- gatesInLayer = [ minBound .. maxBound ]

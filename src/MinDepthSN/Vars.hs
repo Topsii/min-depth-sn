@@ -31,14 +31,12 @@ module MinDepthSN.Vars
     , unused_
     , unusedLit
     -- * Gate
-    , Gate
-        ( Gate
-        )
+    , Gate ( Gate )
     , GateAs()
     , gate_
     , gateLit
     -- * GateOrUnused
-    , GateOrUnused ( GateOrUnused, Unused )
+    , GateOrUnused ( GateOrUnused, Gate, Unused )
     , GateOrUnusedAs(..)
     , gateOrUnused_
     , gateOrUnusedLit
@@ -53,6 +51,8 @@ module MinDepthSN.Vars
     , fromOneInUpTo_
     , toOneInUpToLit
     , fromOneInUpToLit
+    , toOneInUpToLit'
+    , fromOneInUpToLit'
     -- * ToBetweenBefore
     , ToBetweenBefore ( ToBetweenBefore )
     , ToBetweenBeforeAs(..)
@@ -60,12 +60,17 @@ module MinDepthSN.Vars
     , toBetweenBeforeLit
     -- * ViaWrongTwist
     , ViaWrongTwist ( ViaWrongTwist )
-    , ViaWrongTwist(..)
+    , ViaWrongTwistAs(..)
     , viaWrongTwist_
     , viaWrongTwistLit
+    -- * SortedRelation
+    , SortedRel ( SortedRel )
+    , SortedRelAs(..)
+    , sortedRel_
+    , sortedRelLit
     -- * Value
     , Value ( Value )
-    , ValueAs()
+    , ValueAs(..)
     , value_
     , inputValues
     , outputValues
@@ -77,6 +82,7 @@ module MinDepthSN.Vars
         , GateOrUnused
         , ToBetweenBefore
         , ViaWrongTwist
+        , SortedRel
         , Value
         )
     -- * CexRun
@@ -99,6 +105,7 @@ import Data.Typeable ( showsTypeRep, typeRep )
 import Data.Word (Word32)
 
 import MinDepthSN.Data.NetworkType
+import Control.Monad ((>=>))
 
 
 -- #############################################################################
@@ -351,13 +358,26 @@ instance KnownNetType t => Show (FromOneInUpTo t) where
             showsPrec 11 k
 
 -- | Literal of 'ToOneInUpTo' with positive polarity.
-toOneInUpToLit  :: (KnownNetType t, ToOneInUpToAs f) => Channel -> Channel -> Layer -> Lit (f t)
+toOneInUpToLit :: (KnownNetType t, ToOneInUpToAs f) => Channel -> Channel -> Layer -> Lit (f t)
 toOneInUpToLit i j k = PosLit $ ToOneInUpTo i j k
 
 -- | Literal of 'FromOneInUpTo' with positive polarity.
-fromOneInUpToLit  :: (KnownNetType t, FromOneInUpToAs f) => Channel -> Channel -> Layer -> Lit (f t)
+fromOneInUpToLit :: (KnownNetType t, FromOneInUpToAs f) => Channel -> Channel -> Layer -> Lit (f t)
 fromOneInUpToLit i j k = PosLit $ FromOneInUpTo i j k
 
+-- | Literal of 'ToOneInUpTo' with positive polarity.
+-- Returns Nothing if the two channel arguments are equal.
+toOneInUpToLit' :: (KnownNetType t, ToOneInUpToAs f) => Channel -> Channel -> Layer -> Maybe (Lit (f t))
+toOneInUpToLit' i j k
+    | i == j    = Nothing
+    | otherwise = Just $ toOneInUpToLit i j k
+
+-- | Literal of 'FromOneInUpTo' with positive polarity.
+-- Returns Nothing if the two channel arguments are equal.
+fromOneInUpToLit' :: (KnownNetType t, FromOneInUpToAs f) => Channel -> Channel -> Layer -> Maybe (Lit (f t))
+fromOneInUpToLit' i j k
+    | i == j    = Nothing
+    | otherwise = Just $ fromOneInUpToLit i j k
 
 -- #############################################################################
 -- #############################################################################
@@ -434,6 +454,43 @@ viaWrongTwistLit i j k = PosLit $ ViaWrongTwist i j k
 -- #############################################################################
 -- #############################################################################
 
+data SortedRel (t :: NetworkType)
+    = MkSortedRel (Pair 'Ordered 'WithDuplicates BetweenLayers) (Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel)
+    deriving stock (Generic, Eq, Ord, Ix)
+    deriving Enum via FiniteEnumeration (SortedRel t)
+    deriving Bounded via Generically (SortedRel t)
+
+class SortedRelAs f where
+    sortedRelPrism :: Prism' (f t) (SortedRel t)
+
+instance SortedRelAs SortedRel where
+    sortedRelPrism = prism id Right
+
+{-# COMPLETE SortedRel :: SortedRel #-}
+pattern SortedRel :: (SortedRelAs f, KnownNetType t) => Value -> Value -> f t
+pattern SortedRel v1 v2 <- (preview sortedRelPrism >=> pure . srToVals -> Just (v1,v2))
+  where SortedRel (Value i k) (Value j l) = sortedRel_ $ MkSortedRel (Pair k l) (Pair i j)
+
+srToVals :: KnownNetType t => SortedRel t -> (Value, Value)
+srToVals (MkSortedRel (Pair k l) (Pair i j)) = ((Value i k), (Value j l))
+
+sortedRel_ :: (SortedRelAs f, KnownNetType t) => SortedRel t -> f t
+sortedRel_ = review sortedRelPrism 
+
+instance KnownNetType t => Show (SortedRel t) where
+    showsPrec p (SortedRel v1 v2) = showParen (p >= 11) $
+        showsTypeRep (typeRep (Proxy :: Proxy t)) .
+        showString "SortedRel " .
+        showsPrec 11 v1 . showChar ' ' . showsPrec 11 v2
+
+-- | Literal of 'SortedRel' with positive polarity.
+sortedRelLit :: (KnownNetType t, SortedRelAs f) => Value -> Value -> Lit (f t)
+sortedRelLit v1 v2 = PosLit $ SortedRel v1 v2
+
+-- #############################################################################
+-- #############################################################################
+
+
 -- | @Value i k@ creates a variable \(v_i^k\) representing the value on
 -- channel \(i\) between layers \(k\) and \(k+1\).
 data Value = MkValue BetweenLayers Channel
@@ -491,12 +548,13 @@ data NetworkSynthesis t
     | FOIUT Layer (Pair.AbsDiffGT1 (AreGateChannelsOrdered t) Channel)
     | ToBetwBef ToBetweenBefore
     | VWT ViaWrongTwist
+    | SR (SortedRel t)
     | Val Word32 Value
     deriving stock (Generic, Eq, Ord)
     deriving Enum via (FiniteEnumeration (NetworkSynthesis t))
 
-{-# COMPLETE ToOneInUpTo, FromOneInUpTo, ToBetweenBefore, ViaWrongTwist, Value, Gate, Unused :: NetworkSynthesis #-}
-{-# COMPLETE ToOneInUpTo, FromOneInUpTo, ToBetweenBefore, ViaWrongTwist, Value, GateOrUnused :: NetworkSynthesis #-}
+{-# COMPLETE SortedRel, ToOneInUpTo, FromOneInUpTo, ToBetweenBefore, ViaWrongTwist, Value, Gate, Unused :: NetworkSynthesis #-}
+{-# COMPLETE SortedRel, ToOneInUpTo, FromOneInUpTo, ToBetweenBefore, ViaWrongTwist, Value, GateOrUnused :: NetworkSynthesis #-}
 
 instance GateOrUnusedAs NetworkSynthesis where
     gateOrUnusedPrism :: Prism' (NetworkSynthesis t) (GateOrUnused t)
@@ -567,6 +625,17 @@ instance ViaWrongTwistAs (NetworkSynthesis t) where
             VWT vwt -> Right vwt
             _     -> Left ns
 
+instance SortedRelAs NetworkSynthesis where
+    sortedRelPrism :: Prism' (NetworkSynthesis t) (SortedRel t)
+    sortedRelPrism = prism constructSortedRel matchSortedRel 
+      where
+        constructSortedRel :: SortedRel t -> NetworkSynthesis t
+        constructSortedRel = SR
+        matchSortedRel :: NetworkSynthesis t -> Either (NetworkSynthesis t) (SortedRel t)
+        matchSortedRel ns = case ns of
+            SR sr -> Right sr
+            _     -> Left ns
+
 instance ValueAs (Word32 -> NetworkSynthesis t) where
     valuePrism :: Prism' (Word32 -> NetworkSynthesis t) Value
     valuePrism = prism constructOffVal matchOffVal
@@ -593,6 +662,7 @@ instance KnownNetType t => Show (NetworkSynthesis t) where
         FromOneInUpTo i j k -> showString "FromOneInUpTo_ " . showsPrec 11 (FromOneInUpTo i j k :: FromOneInUpTo t)
         ToBetwBef tbb -> showString "ToBetweenBefore_ " . showsPrec 11 tbb
         VWT vwt -> showString "ViaWrongTwist_ " . showsPrec 11 vwt
+        SR sr -> showString "SortedRel_ " . showsPrec 11 sr
         Val cexIdx val -> showString "Value_ " . showsPrec 11 cexIdx . showChar ' ' . showsPrec 11 val
 
 instance KnownNetType t => Dimacs (NetworkSynthesis t) where

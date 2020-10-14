@@ -17,10 +17,12 @@ import MinDepthSN.SAT.Constraints
     , litImplies
     , exactlyOneOf
     , noneOf
+    , atMostOneOf 
     )
 import MinDepthSN.Data.Window ( windowBounds )
 import MinDepthSN.Vars
 import Data.List (genericDrop, sort)
+import Data.Maybe (catMaybes)
 
 
 -- | Each channel \(i\) is either compared with some channel \(j\) or not 
@@ -71,8 +73,8 @@ usage = concat
 
 -- gates between adjacent channels and ranges up to a single channel are already
 -- mapped to the same DIMACS value. Thus they are skipped here
-usageOfOneInUpTo :: [[Lit (NetworkSynthesis 'Standard)]]
-usageOfOneInUpTo = concat $
+oneInUpToConstr :: [[Lit (NetworkSynthesis 'Standard)]]
+oneInUpToConstr = concat $
     [ PosLit (toOneInUpTo_ t) `iffDisjunctionOf` [gateLit l j k | l <- range (i, pred j)]
     | t@(ToOneInUpTo i j k) <- [ minBound .. maxBound ] 
     , not $ areAdjacent i j
@@ -82,8 +84,27 @@ usageOfOneInUpTo = concat $
     , not $ areAdjacent i j
     ]
 
+-- alternative to the usage constraint with smaller clauses
+usageOneInUpTo :: [[Lit (NetworkSynthesis 'Standard)]]
+usageOneInUpTo = concat $
+    [ atMostOneOf [gateLit l j k | l <- range (i, pred j)]
+    | ToOneInUpTo i j k <- [ minBound .. maxBound :: ToOneInUpTo 'Standard] 
+    ] ++
+    [ atMostOneOf [gateLit i l k | l <- range (succ i, j)]
+    | FromOneInUpTo i j k <- [ minBound .. maxBound :: FromOneInUpTo 'Standard]
+    ] ++
+    [ exactlyOneOf $ catMaybes
+        [ Just $ unusedLit i k
+        , toOneInUpToLit' firstChannel i k
+        , fromOneInUpToLit' i lastChannel k
+        ]
+    | k <- layers
+    , i <- channels
+    ]
+        
+
 toBetweenBeforeConstr :: [[Lit (NetworkSynthesis 'Standard)]]
-toBetweenBeforeConstr = concat $
+toBetweenBeforeConstr = concat
     [ defineToBetweenBefore tbb | tbb <- [ minBound .. maxBound ] ]
   where
     defineToBetweenBefore :: ToBetweenBefore -> [[Lit (NetworkSynthesis 'Standard)]]
@@ -149,7 +170,7 @@ breakInpTwists =
         _ -> [ 
                 [ NegLit (gate_ g)
                 , toBetweenBeforeLit i j k
-                , -unusedLit i (pred k) -- fixed line
+                , -unusedLit i (pred k) -- fixed line, this clause now subsumes breakParallelGates Earliest in a generalized encoding
                 -- , unusedLit j (pred k) -- rather twist such that the used channel is i.. we don't really know whether both channels or only one of them is used in layer (pred k)
                 ]
              ] -- ++
@@ -196,9 +217,6 @@ breakInpTwists =
              , r /= o
              ] 
              
-             
-
-
 -- | The first layer is maximal (cf. Bundala and Zavodny "A layer \(L\) is 
 -- called maximal if no more comparators can be added into \(L\)."). Hence there
 -- is at most one unused channel in the first layer. More precisely:
@@ -313,6 +331,7 @@ sorts cexOffset counterexample = concat
   where
     fixValue :: Bool -> (Word32 -> NetworkSynthesis t) -> [Lit (NetworkSynthesis t)]
     fixValue polarity mkVal = [polarize polarity (mkVal cexOffset)]
+
 
 -- for generalized networks
 -- behavior on unused not implemented
