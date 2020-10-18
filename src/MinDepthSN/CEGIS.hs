@@ -27,25 +27,37 @@ main = do
 
 
 sorts' :: forall t. KnownNetType t => Word32 -> [Bool] -> [[Lit (NetworkSynthesis t)]]
-sorts' = case eqT :: Maybe (t :~: 'Standard) of
-    Just Refl -> sortsEM
+sorts' cexOffset cex = case eqT :: Maybe (t :~: 'Standard) of
+    Just Refl -> sortsEM cexOffset cex
     Nothing   -> case eqT :: Maybe (t :~: 'Generalized) of
-        Just Refl -> sorts
+        Just Refl -> sorts cexOffset cex
         _         -> error "bad"
 
-networkSolution :: Either [Bool] [GateOrUnused 'Standard]
+-- isAcrossMultipleLayers :: KnownNetType t => Lit (NetworkSynthesis t) -> Bool
+-- isAcrossMultipleLayers ns = case ns of
+--     PosLit (SortedRel (Value _i k) (Value _j l)) -> abs (fromEnum k - fromEnum l) > 1
+--     NegLit (SortedRel (Value _i k) (Value _j l)) -> abs (fromEnum k - fromEnum l) > 1
+--     _                                            -> False
+
+networkSolution :: forall t. (KnownNetType t, t ~ 'Standard) => Either [Bool] [GateOrUnused t]
 networkSolution = runSolver $ do
 
     -- add mandatory initial constraints
-    addClauses usage
+    -- addClauses usage
     addClauses usageOneInUpTo
-    -- addClauses maximalFirstLayer
     addClauses oneInUpToConstr
 
-    -- addClauses toBetweenBeforeConstr
-    -- addClauses viaWrongTwistConstr
-    -- addClauses $ breakParallelGates Earliest
-    -- addClauses breakInpTwists
+    -- addClauses maximalFirstLayer
+    -- addClauses saturatedTwoLayerPrefix
+    
+    -- addClauses $ filter (all (not . isAcrossMultipleLayers)) propagateSR
+    -- addClauses banRedundantGates
+    -- addClauses saturatedPrefixes
+
+    addClauses toBetweenBeforeConstr
+    addClauses viaWrongTwistConstr
+    addClauses $ breakParallelGates Earliest
+    addClauses breakInpTwists
 
     -- addClauses lastConstr
 

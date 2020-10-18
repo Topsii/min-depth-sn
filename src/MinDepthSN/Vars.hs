@@ -455,7 +455,9 @@ viaWrongTwistLit i j k = PosLit $ ViaWrongTwist i j k
 -- #############################################################################
 
 data SortedRel (t :: NetworkType)
-    = MkSortedRel (Pair 'Ordered 'WithDuplicates BetweenLayers) (Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel)
+    = MkSortedRel
+        (Pair 'Ordered 'WithDuplicates BetweenLayers) -- replace with BetweenLayers BetweenLayers?
+        (Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel)
     deriving stock (Generic, Eq, Ord, Ix)
     deriving Enum via FiniteEnumeration (SortedRel t)
     deriving Bounded via Generically (SortedRel t)
@@ -487,9 +489,9 @@ instance KnownNetType t => Show (SortedRel t) where
 sortedRelLit :: (KnownNetType t, SortedRelAs f) => Value -> Value -> Lit (f t)
 sortedRelLit v1 v2 = PosLit $ SortedRel v1 v2
 
--- #############################################################################
--- #############################################################################
 
+-- #############################################################################
+-- #############################################################################
 
 -- | @Value i k@ creates a variable \(v_i^k\) representing the value on
 -- channel \(i\) between layers \(k\) and \(k+1\).

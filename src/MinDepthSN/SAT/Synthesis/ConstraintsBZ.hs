@@ -10,6 +10,7 @@ import Prelude hiding (negate)
 import Data.Word (Word32)
 import Data.Ix
 import Data.Enum (succeeding, between)
+import Data.Pair
 import SAT.IPASIR (Lit(..), negate, polarize)
 import MinDepthSN.SAT.Constraints 
     ( fixGateOrUnused
@@ -178,13 +179,13 @@ breakInpTwists =
     breakWrongTwist vwt@(ViaWrongTwist p o k) = case k of
         0 -> [] -- ViaWrongTwist p o 0 is always negative
         _ -> [ NegLit $ viaWrongTwist_ vwt
-             , unusedLit o k
-             , unusedLit p k
+             , -unusedLit o k
+             , -unusedLit p k
              ] :
              [
                  [ NegLit $ viaWrongTwist_ vwt
                  , -gateLit (min o q) (max o q) k
-                 , unusedLit p k
+                 , -unusedLit p k
                  ] 
              | q <- channels
              , q /= o
@@ -193,7 +194,7 @@ breakInpTwists =
              ] ++
              [
                  [ NegLit $ viaWrongTwist_ vwt
-                 , unusedLit o k
+                 , -unusedLit o k
                  , -gateLit (min p r) (max p r) k
                  ] 
              | r <- channels
@@ -203,7 +204,7 @@ breakInpTwists =
              ] ++
              [
                  [ NegLit $ viaWrongTwist_ vwt
-                 , unusedLit o k
+                 , -gateLit (min o q) (max o q) k
                  , -gateLit (min p r) (max p r) k
                  ] 
              | q <- channels
@@ -217,6 +218,201 @@ breakInpTwists =
              , r /= o
              ] 
              
+updateSR :: forall t. KnownNetType t => (Channel, Channel) -> [[Lit (NetworkSynthesis t)]]
+updateSR (low, upp) = concat
+    [ concat
+        [ PosLit (gate_ g) `litImplies` fixGate g
+        | g <- range (Gate low upp firstLayer, Gate low upp lastLayer)
+        ]
+    -- , 
+    --     [ -- sorted relation is inferred backwards
+    --         [  toOneInUpToLit low j l
+    --         ,  sortedRelLit (Value i k) ( inp j l)
+    --         , -sortedRelLit (Value i k) (outp j l)
+    --         ] -- not toOneInUpToLit implies j is min channel or unused
+    --     | k <- [ minBound .. maxBound ] :: [BetweenLayers]
+    --     , l <- layers
+    --     , Pair i j <- range (Pair low upp, Pair low upp) :: [Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel]
+    --     ]
+    , 
+        [ catMaybes
+            [ toOneInUpToLit' low j l
+            , Just $ -sortedRelLit (inp  j l) (Value m k)
+            , Just $  sortedRelLit (outp j l) (Value m k)
+            ] -- not toOneInUpToLit implies j is min channel or unused
+        | l <- layers
+        , k <- [ minBound .. maxBound ] :: [BetweenLayers]
+        , Pair j m <- range (Pair low upp, Pair low upp) :: [Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel]
+        ]
+    -- , 
+    --     [ -- sorted relation is inferred backwards
+    --         [  fromOneInUpToLit i upp k
+    --         ,  sortedRelLit (inp  i k) (Value j l)
+    --         , -sortedRelLit (outp i k) (Value j l)
+    --         ] -- not fromOneInUpToLit implies i is max channel or unused
+    --     | k <- layers
+    --     , l <- [ minBound .. maxBound ] :: [BetweenLayers]
+    --     , Pair i j <- range (Pair low upp, Pair low upp) :: [Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel]
+    --     ]
+    , 
+        [ catMaybes
+            [ fromOneInUpToLit' i upp k
+            , Just $ -sortedRelLit (Value h l) (inp  i k)
+            , Just $  sortedRelLit (Value h l) (outp i k)
+            ] -- not fromOneInUpToLit implies i is max channel or unused
+        | k <- layers
+        , l <- [ minBound .. maxBound ] :: [BetweenLayers]
+        , Pair h i <- range (Pair low upp, Pair low upp) :: [Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel]
+        ]
+    ]
+  where
+    fixGate :: KnownNetType t => Gate t -> [[Lit (NetworkSynthesis t)]]
+    fixGate g = case g of
+        Gate i j k -> 
+            -- [ sortedRelLit (outp i k) (outp j k) ] : --delete this line, as it is inferred anyway?
+            [ sortedRelLit (inp  i k) (outp j k) ] :
+            [ sortedRelLit (outp i k)  (inp j k) ] : concat
+            [ concat 
+                [ 
+                    [
+                        [  sortedRelLit (outp i k) (Value m l)
+                        , -sortedRelLit (inp  j k) (Value m l)
+                        ]
+                    ,
+                        [  sortedRelLit (outp j k) (Value m l)
+                        , -sortedRelLit (inp  i k) (Value m l)
+                        , -sortedRelLit (inp  j k) (Value m l)
+                        ]
+                    ]
+                | Pair j' m <- range (Pair low upp, Pair low upp) :: [Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel]
+                , j == j'
+                , m /= i
+                , l <- [ minBound .. maxBound ] :: [BetweenLayers]
+                ]
+            -- , -- sorted relation is inferred backwards
+            --     [ 
+            --         [ -sortedRelLit (Value h l) (outp i k)
+            --         ,  sortedRelLit (Value h l) (inp  j k)
+            --         ]
+            --     | Pair h i' <- range (Pair low upp, Pair low upp) :: [Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel]
+            --     , i == i'
+            --     , h /= j
+            --     , l <- [ minBound .. maxBound ] :: [BetweenLayers]
+            --     ]
+            , concat
+                [ 
+                    [
+                        [  sortedRelLit (Value h l) (outp j k)
+                        , -sortedRelLit (Value h l) (inp  i k)
+                        ]
+                    ,
+                        [  sortedRelLit (Value h l) (outp i k)
+                        , -sortedRelLit (Value h l) (inp  i k)
+                        , -sortedRelLit (Value h l) (inp  j k)
+                        ]
+                    ]
+                | Pair h i' <- range (Pair low upp, Pair low upp) :: [Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel]
+                , i == i'
+                , h /= j
+                , l <- [ minBound .. maxBound ] :: [BetweenLayers]
+                ]
+            -- , -- sorted relation is inferred backwards
+            --     [
+            --         [ -sortedRelLit (outp j k) (Value m l)
+            --         ,  sortedRelLit (inp  i k) (Value m l)
+            --         ]
+            --     | Pair j' m <- range (Pair low upp, Pair low upp) :: [Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel]
+            --     , j == j'
+            --     , m /= i
+            --     , l <- [ minBound .. maxBound ] :: [BetweenLayers]
+            --     ]
+            ]
+    inp, outp :: Channel -> Layer -> Value
+    inp  i k = Value i (before k)
+    outp i k = Value i (after  k)
+
+
+propagateSR :: forall t. KnownNetType t => [[Lit (NetworkSynthesis t)]]
+propagateSR = concat
+    [ 
+        [ [ -sortedRelLit (Value i beforeFirstLayer) (Value j beforeFirstLayer)]
+        | Pair i j <- [ minBound .. maxBound ] :: [Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel]
+        ]
+    , updateSR (l, u)
+    ]
+  where
+    l, u :: Channel
+    (l, u) = (firstChannel, lastChannel)
+
+banRedundantGates :: forall t. KnownNetType t => [[Lit (NetworkSynthesis t)]]
+banRedundantGates =
+    [ [ -sortedRelLit (Value i $ before k) (Value j $ before k), NegLit $ gate_ g ]
+    | g@(Gate i j k) <- [ minBound .. maxBound ]
+    ]
+
+-- | CAREFUL: the legality of this constraint has not been proven
+saturatedPrefixes :: forall t. KnownNetType t => [[Lit (NetworkSynthesis t)]]
+saturatedPrefixes =
+    [ [ sortedRelLit (Value i $ before k) (Value j $ before k), -unusedLit i k, -unusedLit j k ]
+    | Gate i j k <- range
+        ( Gate firstChannel lastChannel firstLayer
+        , Gate firstChannel lastChannel lastLayer
+        ) :: [Gate t]
+    ]
+
+updateH :: Word32 -> (Channel, Channel) -> [[Lit (NetworkSynthesis 'Standard)]]
+updateH cexOffset (l, u) = concat
+    [ concat
+        [ fixGate g
+        | g <- range (Gate l u firstLayer, Gate l u lastLayer)
+        ]
+    , 
+        [ catMaybes
+            [ toOneInUpToLit' l j k
+            , Just $  inp  j k
+            , Just $ -outp j k
+            ] -- not toOneInUpToLit implies j is min channel or unused
+        | j <- range (l, u)
+        , k <- layers
+        ]
+    , 
+        [ catMaybes 
+            [ fromOneInUpToLit' i u k
+            , Just $ -inp  i k
+            , Just $  outp i k
+            ] -- not fromOneInUpToLit implies i is max channel or unused
+        | i <- range (l, u)
+        , k <- layers
+        ]
+    ]
+  where
+    fixGate :: KnownNetType t => Gate t -> [[Lit (NetworkSynthesis t)]]
+    fixGate g = case g of
+        Gate i j k -> 
+            [ [ NegLit $ gate_ g, outp i k, -inp j k, -inp i k ]
+            , [ -sortedRelLit (Value i $ after k) (Value j $ before k), -outp i k, inp j k ]
+            , [ NegLit $ gate_ g, -outp j k, inp j k, inp i k ]
+            , [ -sortedRelLit (Value i $ before k) (Value j $ after k), outp j k,-inp i k ]
+            ]
+    inp, outp :: Channel -> Layer -> Lit (NetworkSynthesis t)
+    inp  i k = PosLit (Value i (before k) cexOffset)
+    outp i k = PosLit (Value i (after  k) cexOffset)
+    
+sortsH :: Word32 -> [Bool] -> [[Lit (NetworkSynthesis 'Standard)]]
+sortsH cexOffset counterexample = concat
+    [ zipWith fixValue cexFromL $ map value_ $ range (Value l beforeFirstLayer, Value u beforeFirstLayer)
+    , updateH cexOffset (l, u)
+    , zipWith fixValue (sort cexFromL) $ map value_ $ range (Value l afterLastLayer, Value u afterLastLayer)
+    ]
+  where
+    l, u :: Channel
+    -- (l, u) = (firstChannel, lastChannel)
+    (l, u) = windowBounds counterexample
+    cexFromL :: [Bool]
+    cexFromL = genericDrop l counterexample
+    fixValue :: Bool -> (Word32 -> NetworkSynthesis t) -> [Lit (NetworkSynthesis t)]
+    fixValue polarity mkVal = [polarize polarity (mkVal cexOffset)]
+
 -- | The first layer is maximal (cf. Bundala and Zavodny "A layer \(L\) is 
 -- called maximal if no more comparators can be added into \(L\)."). Hence there
 -- is at most one unused channel in the first layer. More precisely:
@@ -242,7 +438,15 @@ maximalFirstLayer
     | otherwise = exactlyOneOf unusedLitsInFirstLayer
   where
     unusedLitsInFirstLayer :: [Lit (NetworkSynthesis t)]
-    unusedLitsInFirstLayer = [ unusedLit i 0 | i <- channels ]
+    unusedLitsInFirstLayer = [ unusedLit i firstLayer | i <- channels ]
+
+
+saturatedTwoLayerPrefix :: forall t. KnownNetType t => [[Lit (NetworkSynthesis t)]]
+saturatedTwoLayerPrefix =
+    [ [ gateLit i j firstLayer, -unusedLit i (succ firstLayer), -unusedLit j (succ firstLayer) ]
+    | Pair i j <- range (Pair firstChannel lastChannel, Pair firstChannel lastChannel) :: [Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel]
+    ]
+
 
 -- | Values of a given counterexample input are propagated along the channels 
 -- according to the placement of the comparators.
@@ -274,23 +478,25 @@ updateEM :: Word32 -> (Channel, Channel) -> [[Lit (NetworkSynthesis 'Standard)]]
 updateEM cexOffset (l, u) = concat
     [ concat
         [ PosLit (gate_ g) `litImplies` fixGate g
-        | g <- [ minBound .. maxBound ]
+        | g <- range (Gate l u firstLayer, Gate l u lastLayer)
         ]
     , 
-        [ [ toOneInUpToLit l j k, inp j k, -outp j k ] -- not toOneInUpToLit implies j is min channel or unused
-        | j <- range (succ l, u)
+        [ catMaybes
+            [ toOneInUpToLit' l j k
+            , Just $  inp  j k
+            , Just $ -outp j k
+            ] -- not toOneInUpToLit implies j is min channel or unused
+        | j <- range (l, u)
         , k <- layers
         ]
     , 
-        [ [ fromOneInUpToLit i u k, -inp i k, outp i k ] -- not fromOneInUpToLit implies i is max channel or unused
-        | i <- range (l, pred u)
+        [ catMaybes 
+            [ fromOneInUpToLit' i u k
+            , Just $ -inp  i k
+            , Just $  outp i k
+            ] -- not fromOneInUpToLit implies i is max channel or unused
+        | i <- range (l, u)
         , k <- layers
-        ]
-    ,   [ [ inp l k, -outp l k ] -- l (first channel) is min channel or unused
-        | k <- layers
-        ]
-    ,   [ [ -inp u k, outp u k ] -- u (last channel) is max channel or unused
-        | k <- layers
         ]
     ]
   where
