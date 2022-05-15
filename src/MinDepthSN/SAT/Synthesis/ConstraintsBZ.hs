@@ -25,7 +25,6 @@ import MinDepthSN.Vars
 import Data.List (genericDrop, sort)
 import Data.Maybe (catMaybes)
 
-
 -- | Each channel \(i\) is either compared with some channel \(j\) or not 
 -- used in layer \(k\).
 --
@@ -85,15 +84,28 @@ oneInUpToConstr = concat $
     , not $ areAdjacent i j
     ]
 
--- alternative to the usage constraint with smaller clauses
-usageOneInUpTo :: [[Lit (NetworkSynthesis 'Standard)]]
-usageOneInUpTo = concat $
-    [ atMostOneOf [gateLit l j k | l <- range (i, pred j)]
+oneInUpToConstrRec :: [[Lit (NetworkSynthesis 'Standard)]]
+oneInUpToConstrRec = concat $
+    [ PosLit (toOneInUpTo_ t) `iffDisjunctionOf` [gateLit i j k, toOneInUpToLit (succ i) j k]
+    | t@(ToOneInUpTo i j k) <- [ minBound .. maxBound ] 
+    , not $ areAdjacent i j
+    ] ++
+    [ PosLit (fromOneInUpTo_ f) `iffDisjunctionOf` [gateLit i j k, fromOneInUpToLit i (pred j) k]
+    | f@(FromOneInUpTo i j k) <- [ minBound .. maxBound ]
+    , not $ areAdjacent i j
+    ]
+
+usageOneInUpToRec :: [[Lit (NetworkSynthesis 'Standard)]]
+usageOneInUpToRec = concat $
+    [ atMostOneOf [gateLit i j k, toOneInUpToLit (succ i) j k]
     | ToOneInUpTo i j k <- [ minBound .. maxBound :: ToOneInUpTo 'Standard] 
+    , not $ areAdjacent i j
     ] ++
-    [ atMostOneOf [gateLit i l k | l <- range (succ i, j)]
+    [ atMostOneOf [gateLit i j k, fromOneInUpToLit i (pred j) k]
     | FromOneInUpTo i j k <- [ minBound .. maxBound :: FromOneInUpTo 'Standard]
-    ] ++
+    , not $ areAdjacent i j
+    ]
+    ++
     [ exactlyOneOf $ catMaybes
         [ Just $ unusedLit i k
         , toOneInUpToLit' firstChannel i k
@@ -102,6 +114,45 @@ usageOneInUpTo = concat $
     | k <- layers
     , i <- channels
     ]
+    {- ++
+    [ atMostOneOf $ catMaybes
+        [ toOneInUpToLit' firstChannel i k
+        , fromOneInUpToLit' i lastChannel k
+        ]
+    | k <- layers
+    , i <- channels
+    ]-}
+
+-- alternative to the usage constraint with smaller clauses
+usageOneInUpTo :: [[Lit (NetworkSynthesis 'Standard)]]
+usageOneInUpTo = concat $
+    [ atMostOneOf [gateLit l j k | l <- range (i, pred j)]
+    | ToOneInUpTo i j k <- [ minBound .. maxBound :: ToOneInUpTo 'Standard] 
+    ] ++
+    [ atMostOneOf [gateLit i l k | l <- range (succ i, j)]
+    | FromOneInUpTo i j k <- [ minBound .. maxBound :: FromOneInUpTo 'Standard]
+    ]
+    ++
+    [ (atMostOneOf $ catMaybes
+        [ Just $ unusedLit i k
+        , toOneInUpToLit' firstChannel i k
+        -- , fromOneInUpToLit' i lastChannel k
+        ]) ++ (atMostOneOf $ catMaybes
+        [ Just $ unusedLit i k
+        -- , toOneInUpToLit' firstChannel i k
+        , fromOneInUpToLit' i lastChannel k
+        ])
+    | k <- layers
+    , i <- channels
+    ]
+    {- ++
+    [ atMostOneOf $ catMaybes
+        [ toOneInUpToLit' firstChannel i k
+        , fromOneInUpToLit' i lastChannel k
+        ]
+    | k <- layers
+    , i <- channels
+    ]-}
         
 
 toBetweenBeforeConstr :: [[Lit (NetworkSynthesis 'Standard)]]
@@ -331,7 +382,6 @@ updateSR (low, upp) = concat
     inp  i k = Value i (before k)
     outp i k = Value i (after  k)
 
-
 propagateSR :: forall t. KnownNetType t => [[Lit (NetworkSynthesis t)]]
 propagateSR = concat
     [ 
@@ -350,7 +400,7 @@ banRedundantGates =
     | g@(Gate i j k) <- [ minBound .. maxBound ]
     ]
 
--- | CAREFUL: the legality of this constraint has not been proven
+-- | WARNING: the legality of this constraint has not been proven
 saturatedPrefixes :: forall t. KnownNetType t => [[Lit (NetworkSynthesis t)]]
 saturatedPrefixes =
     [ [ sortedRelLit (Value i $ before k) (Value j $ before k), -unusedLit i k, -unusedLit j k ]
