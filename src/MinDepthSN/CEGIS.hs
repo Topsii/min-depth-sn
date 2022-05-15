@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE GADTs #-}
 
-module MinDepthSN.CEGIS (main) where
+module MinDepthSN.CEGIS (main,networkSolution) where
 import Debug.Trace
 import Data.List
 import SAT.IPASIR
@@ -12,18 +12,34 @@ import MinDepthSN.SAT.Synthesis.ConstraintsBZ
 -- import MinDepthSN.SAT.Synthesis.End
 import MinDepthSN.SAT.CexRun.Constraints
 import MinDepthSN.Vars
+
+import MinDepthSN.PrefixCost
 import MinDepthSN.Data.Window
 import Data.Word (Word32)
 
 import Type.Reflection
 import Data.Typeable (eqT)
+import MinDepthSN.SAT.Synthesis.Greenfilter3rdLayer
+
+
 
 main :: IO ()
 -- main = print $ runSolver (addClauses minimalRepresentative >> solve)
+-- main = do
+--     putStrLn $ "n: " ++ show n
+--     putStrLn $ "d: " ++ show d
+--     -- print networkSolution -- :: Either [Bool] [GateOrUnused 'Standard])
+--     print net
+
 main = do
-    putStrLn $ "n: " ++ show n
-    putStrLn $ "d: " ++ show d
-    print (networkSolution ) -- :: Either [Bool] [GateOrUnused 'Standard])
+    -- putStrLn "greenfilterOpt32Inputs"
+    -- print greenfilterOpt32Inputs
+    putStrLn "greenfilterOpt32InputsRev"
+    print greenfilterOpt32InputsRev
+    -- putStrLn "greenfilterInputsWinSizeDistr"
+    -- print $ greenfilterInputsWinSizeDistr
+    -- putStrLn "*> windowSizeDistribution All greenfilter32_opt"
+    -- print $ windowSizeDistribution All greenfilter32_opt
 
 
 sorts' :: forall t. KnownNetType t => Word32 -> [Bool] -> [[Lit (NetworkSynthesis t)]]
@@ -43,9 +59,16 @@ networkSolution :: forall t. (KnownNetType t, t ~ 'Standard) => Either [Bool] [G
 networkSolution = runSolver $ do
 
     -- add mandatory initial constraints
-    -- addClauses usage
-    addClauses usageOneInUpTo
+    addClauses usage
+    -- addClauses usageOneInUpToRec
+    -- addClauses usageOneInUpTo
     addClauses oneInUpToConstr
+
+    -- addClauses $ map ((: []) . PosLit . gateOrUnused_) x
+    -- addClauses prefix
+    -- addClauses greenfilterPrefix
+    addClauses greenfilterPrefix12
+    -- addClauses greenfilterPrefixMod3
 
     -- addClauses maximalFirstLayer
     -- addClauses saturatedTwoLayerPrefix
@@ -54,15 +77,15 @@ networkSolution = runSolver $ do
     -- addClauses banRedundantGates
     -- addClauses saturatedPrefixes
 
-    addClauses toBetweenBeforeConstr
-    addClauses viaWrongTwistConstr
-    addClauses $ breakParallelGates Earliest
-    addClauses breakInpTwists
+    -- addClauses toBetweenBeforeConstr
+    -- addClauses viaWrongTwistConstr
+    -- addClauses $ breakParallelGates Earliest
+    -- addClauses breakInpTwists
 
     -- addClauses lastConstr
 
     -- possibly add initial counterexample constraints
-    let initCexCnt = 500
+    let initCexCnt = 2700
     let initCexs = take initCexCnt . prioritizeSmallWindows $ inputs
     let (cxData, sortsCexs) = mapAccumR (\(cIdx, cOffset) cx -> ((cIdx + 1, cOffset + fromIntegral (n * (d+1))), sorts' cOffset cx)) (0 :: Word32, 0) initCexs
     addClauses $ concat sortsCexs
@@ -117,5 +140,6 @@ synthesizeSortingNetwork (cexIdx, cexOffset) cexInput = do
 validateSortingNetwork :: KnownNetType t => (Word32, Word32) -> [GateOrUnused t] -> Solver s (NetworkSynthesis t) (Either [Bool] [GateOrUnused t])
 validateSortingNetwork (cexIdx,cexOffset) network = case findCounterexampleRun network of
     Nothing -> pure $ Right network
-    Just cexInput -> trace (show cexIdx ++ ": " ++ (concatMap (show . fromEnum) cexInput)) $
+    Just cexInput -> trace (show cexIdx ++ ": " ++ concatMap (show . fromEnum) cexInput) $
         synthesizeSortingNetwork (cexIdx, cexOffset) cexInput
+

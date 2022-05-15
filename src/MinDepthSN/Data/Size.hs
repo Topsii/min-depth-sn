@@ -1,7 +1,6 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# language DataKinds #-}
 {-# language TypeOperators #-}
@@ -191,8 +190,8 @@ beforeLayers = map before layers
 -- timesTwoPlusOne :: (KnownNat m, KnownNat n, (n+n) ~ (m+1)) => Finite n -> Finite (n + n)
 -- timesTwoPlusOne = shift . fromJust . strengthen . timesTwo
 
-type N = 10
-type D = 6
+type N = 32
+type D = 8
 
 -- gatesInLayer :: [GateInLayer]
 -- gatesInLayer = [ minBound .. maxBound ]
@@ -222,6 +221,7 @@ newtype Layer = Layer (Finite D)
     , Ix
     , Real)
     deriving stock Generic
+
 
 -- newtype GateInLayer = GateInLayer (Finite (N `Div` 2))
 --     deriving newtype
@@ -264,28 +264,6 @@ newtype BetweenLayers = BetweenLayers (Finite (D+1))
                -- is supposed to be useful.
     , Ord
     , Ix
-    , Real)
-    deriving stock Generic
-
--- | Indicates some layer or the input before the first layer or the output
--- after the last layer.
---
--- A value of 0 indicates an input position (before the first layer).
---
--- A value of 1 indicates the first layer.
---
--- A value of d indicates the last layer.
---
--- A value of d+1 indicates an output position (after the last layer).
-newtype Level = Level (Finite (D+2))
-    deriving newtype
-    ( Bounded
-    , Enum
-    , Eq
-    , Integral -- ^ __Not__ modular arithmetic.
-    , Num      -- ^ Modular arithmetic. Only the fromInteger function 
-               -- is supposed to be useful.
-    , Ord
     , Real)
     deriving stock Generic
 

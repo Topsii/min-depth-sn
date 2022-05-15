@@ -34,6 +34,7 @@ module MinDepthSN.Vars
     , Gate ( Gate )
     , GateAs()
     , gate_
+    , revGate
     , gateLit
     -- * GateOrUnused
     , GateOrUnused ( GateOrUnused, Gate, Unused )
@@ -188,6 +189,9 @@ instance KnownNetType t => Show (Gate t) where
         showsPrec 11 j . showChar ' ' . 
         showsPrec 11 k
 
+revGate :: (GateAs g, KnownNetType t) => Channel -> Channel -> Layer -> g t
+revGate i j k = Gate (maxBound - i) (maxBound - j) k
+
 -- | Literal of 'Gate' with positive polarity.
 gateLit :: (KnownNetType t, GateAs g) => Channel -> Channel -> Layer -> Lit (g t)
 gateLit i j k = PosLit $ Gate i j k
@@ -274,7 +278,7 @@ gateOrUnusedLit i j k = PosLit $ GateOrUnused i j k
 
 {- | @ToOneInUpTo i j k@ creates a variable \(t_{i,j}^k\) with \( i \neq j \) 
 representing the fact that there is a gate with min channel \(l\) and max
-channel \(j\) in layer \(k\) where \(l\) is is in the interval from \(j\) up
+channel \(j\) in layer \(k\) where \(l\) is in the interval from \(j\) up
 to \(i\) exclusive \(j\) and inclusive \(i\), i.e. 
   
   * \(t_{i,j}^k\) with \( i < j \) indicates there is some min-max gate \( g_{l,j}^k\) with \(i \le l < j \)
@@ -292,7 +296,7 @@ data ToOneInUpTo (t :: NetworkType) = MkToOneInUpTo Layer (Pair (AreGateChannels
 
 {- | @FromOneInUpTo i j k@ creates a variable \(f_{i,j}^k\) with \( i \neq j \) 
 representing the fact that there is a gate with min channel \(i\) and max
-channel \(l\) in layer \(k\) where \(l\) is is in the interval from \(i\) up
+channel \(l\) in layer \(k\) where \(l\) is in the interval from \(i\) up
 to \(j\) exclusive \(i\) and inclusive \(j\), i.e. 
   
   * \(f_{i,j}^k\) with \( i < j \) indicates there is some min-max gate \( g_{i,l}^k\) with \(i < l \le j \)
