@@ -7,7 +7,7 @@ import Test.PreservesOrd
 import Test.Tasty
 import Test.Tasty.HUnit
 
-testBoundedEnum :: forall a. (Show a, Eq a, Ord a, Enum a, Bounded a) => [a] -> PreservesOrder -> TestTree
+testBoundedEnum :: forall a. (Show a, Ord a, Enum a, Bounded a) => [a] -> PreservesOrder -> TestTree
 testBoundedEnum vals ord = testGroup "BoundedEnum"
     [ testCase "enumAll"  $ enumAll vals ord
     , testCase "fromEnum" $ enumFromEnum vals

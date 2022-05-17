@@ -47,16 +47,18 @@ testPairs = testGroup "Pair"
     ]
 
 testPair :: forall (o :: Order) (d :: Duplicates). (Typeable o, Typeable d) => Proxy o -> Proxy d -> TestTree
-testPair _o _d = testGroup "Pair tests" $
+testPair _o _d = testGroup "Pair tests"
     [ testSmallType (pairs @o @d @(Finite 5)) PreservesOrd
-    , testProperty "pair ix range" $ ixPairs @o @d @(Finite 5) Proxy Proxy Proxy
+    , testProperty "pair ix range" $ ixPairs @o @d @(Finite 5)
     ]
     
 testAbsDiffGT1 :: forall (o :: Order). Typeable o => Proxy o -> TestTree
 testAbsDiffGT1 _o = testSmallType (absdiffgt1s @o @(Finite 5)) ViolatesOrd
 
-testSmallType :: forall a. (Show a, Ix a, Bounded a, Enum a, Typeable a, Serial IO a) => [a] -> PreservesOrder -> TestTree
-testSmallType vals ord = testGroup (showsTypeRep (typeRep (Proxy @a)) $ "") $
+testSmallType
+  :: forall a. (Show a, Ix a, Bounded a, Enum a, Typeable a, Serial IO a)
+  => [a] -> PreservesOrder -> TestTree
+testSmallType vals ord = testGroup (showsTypeRep (typeRep (Proxy @a)) "") $
     [ testIxLaws @a Proxy
     , testBoundedEnum vals ord
     , testIxBoundedEnum @a Proxy
@@ -64,20 +66,19 @@ testSmallType vals ord = testGroup (showsTypeRep (typeRep (Proxy @a)) $ "") $
         PreservesOrd -> [ testIxOrdLaws @a Proxy ]
         ViolatesOrd  -> []
 
-ixPairs :: forall (o :: Order) (d :: Duplicates) a m. (Typeable o, Typeable d, Show a, Bounded a, Ix a, Serial m a) => Proxy o -> Proxy d -> Proxy a -> Property m
-ixPairs _o _d _a =
-    over series $ \(l :: Pair o d a) ->
-    over series $ \(u :: Pair o d a) ->
-        range (l,u) == pairIxRange (l,u)
-
-pairIxRange :: (Typeable o, Typeable d, Ix a) => (Pair o d a, Pair o d a) -> [Pair o d a]
-pairIxRange (Pair l1 l2, Pair u1 u2) = pairsRange (min l1 l2, max u1 u2)
+ixPairs :: (Typeable o, Typeable d, Ix a) => Pair o d a -> Pair o d a -> Bool
+ixPairs l u = range (l,u) == pairIxRange (l,u)
+  where
+    pairIxRange
+        :: (Typeable o, Typeable d, Ix a) 
+        => (Pair o d a, Pair o d a) -> [Pair o d a]
+    pairIxRange (Pair l1 l2, Pair u1 u2) = pairRange (min l1 l2, max u1 u2)
 
 pairs :: forall o d a. (Bounded a, Ix a, Typeable o, Typeable d) => [Pair o d a]
-pairs = pairsRange (minBound, maxBound)
+pairs = pairRange (minBound, maxBound)
 
-pairsRange :: forall o d a. (Ix a, Typeable o, Typeable d) => (a, a) -> [Pair o d a]
-pairsRange b = 
+pairRange :: forall o d a. (Ix a, Typeable o, Typeable d) => (a, a) -> [Pair o d a]
+pairRange b = 
     [ Pair x y
     | x <- range b
     , y <- range b
@@ -92,7 +93,7 @@ pairsRange b =
         OWD -> const (const True)
 
 absdiffgt1s :: forall o a. (Bounded a, Enum a, Ix a, Typeable o) => [AbsDiffGT1 o a] 
-absdiffgt1s = absdiffgt1sRange (minBound,maxBound)
+absdiffgt1s = absdiffgt1sRange (minBound, maxBound)
 
 absdiffgt1sRange :: forall o a. (Enum a, Ix a, Typeable o) => (a, a) -> [AbsDiffGT1 o a] 
 absdiffgt1sRange b =
