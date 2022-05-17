@@ -22,6 +22,8 @@
 
 {-# OPTIONS_GHC -fno-warn-duplicate-exports #-} -- pattern synonyms are intentionally bundled with multiple types
 
+{-# language TypeFamilies #-}
+
 module MinDepthSN.Vars
     ( module MinDepthSN.Data.Size
     , module MinDepthSN.Data.NetworkType
@@ -41,19 +43,19 @@ module MinDepthSN.Vars
     , GateOrUnusedAs(..)
     , gateOrUnused_
     , gateOrUnusedLit
-    -- * ToOneInUpTo / FromOneInUpTo
-    , ToOneInUpTo
-        ( ToOneInUpTo
+    -- * Max / Min
+    , Max
+        ( Max
         )
-    , FromOneInUpTo ( FromOneInUpTo )
-    , ToOneInUpToAs(..)
-    , FromOneInUpToAs(..)
-    , toOneInUpTo_
-    , fromOneInUpTo_
-    , toOneInUpToLit
-    , fromOneInUpToLit
-    , toOneInUpToLit'
-    , fromOneInUpToLit'
+    , Min ( Min )
+    , MaxAs(..)
+    , MinAs(..)
+    , max_
+    , min_
+    , maxLit
+    , minLit
+    , maxLit'
+    , minLit'
     -- * ToBetweenBefore
     , ToBetweenBefore ( ToBetweenBefore )
     , ToBetweenBeforeAs(..)
@@ -276,9 +278,9 @@ gateOrUnusedLit i j k = PosLit $ GateOrUnused i j k
 -- #############################################################################
 -- #############################################################################
 
-{- | @ToOneInUpTo i j k@ creates a variable \(t_{i,j}^k\) with \( i \neq j \) 
+{- | @Max i j k@ creates a variable \(t_{i,j}^k\) with \( i \neq j \) 
 representing the fact that there is a gate with min channel \(l\) and max
-channel \(j\) in layer \(k\) where \(l\) is in the interval from \(j\) up
+channel \(j\) in layer \(k\) where \(l\) is in the range from \(j\) up
 to \(i\) exclusive \(j\) and inclusive \(i\), i.e. 
   
   * \(t_{i,j}^k\) with \( i < j \) indicates there is some min-max gate \( g_{l,j}^k\) with \(i \le l < j \)
@@ -287,16 +289,17 @@ to \(i\) exclusive \(j\) and inclusive \(i\), i.e.
   * \(t_{i,j}^k\) with \( i > j \) indicates there is some max-min gate \( g_{l,j}^k\) with \(i \ge l > j \)
   in layer \(k\)
 
-  See 'FromOneInUpTo' for the motivation of this variable.
+  See 'Min' for the motivation of this variable.
 -}
-data ToOneInUpTo (t :: NetworkType) = MkToOneInUpTo Layer (Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel)
+data Max (t :: NetworkType) = MkMax Layer (Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel)
     deriving stock (Generic, Eq, Ord, Ix)
-    deriving Enum via (FiniteEnumeration (ToOneInUpTo t))
-    deriving Bounded via (Generically (ToOneInUpTo t))
+    deriving Enum via (FiniteEnumeration (Max t))
+    deriving Bounded via (Generically (Max t))
 
-{- | @FromOneInUpTo i j k@ creates a variable \(f_{i,j}^k\) with \( i \neq j \) 
+
+{- | @Min i j k@ creates a variable \(f_{i,j}^k\) with \( i \neq j \) 
 representing the fact that there is a gate with min channel \(i\) and max
-channel \(l\) in layer \(k\) where \(l\) is in the interval from \(i\) up
+channel \(l\) in layer \(k\) where \(l\) is in the range from \(i\) up
 to \(j\) exclusive \(i\) and inclusive \(j\), i.e. 
   
   * \(f_{i,j}^k\) with \( i < j \) indicates there is some min-max gate \( g_{i,l}^k\) with \(i < l \le j \)
@@ -312,76 +315,76 @@ to \(j\) exclusive \(i\) and inclusive \(j\), i.e.
   However they are (hopefully) able to convey the motivation for the
   variables.
 -}
-data FromOneInUpTo (t :: NetworkType) = MkFromOneInUpTo Layer (Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel)
+data Min (t :: NetworkType) = MkMin Layer (Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel)
     deriving stock (Generic, Eq, Ord, Ix)
-    deriving Enum via (FiniteEnumeration (FromOneInUpTo t))
-    deriving Bounded via (Generically (FromOneInUpTo t))
+    deriving Enum via (FiniteEnumeration (Min t))
+    deriving Bounded via (Generically (Min t))
 
-class ToOneInUpToAs f where
-    toOneInUpToPrism :: KnownNetType t => Prism' (f t) (ToOneInUpTo t)
+class MaxAs f where
+    maxPrism :: KnownNetType t => Prism' (f t) (Max t)
 
-class FromOneInUpToAs f where
-    fromOneInUpToPrism :: KnownNetType t => Prism' (f t) (FromOneInUpTo t)
+class MinAs f where
+    minPrism :: KnownNetType t => Prism' (f t) (Min t)
 
-instance ToOneInUpToAs ToOneInUpTo where
-    toOneInUpToPrism = prism id Right
+instance MaxAs Max where
+    maxPrism = prism id Right
 
-instance FromOneInUpToAs FromOneInUpTo where
-    fromOneInUpToPrism = prism id Right
+instance MinAs Min where
+    minPrism = prism id Right
 
-{-# COMPLETE ToOneInUpTo :: ToOneInUpTo #-}
-pattern ToOneInUpTo :: (ToOneInUpToAs f, KnownNetType t) => Channel -> Channel -> Layer -> (f t)
-pattern ToOneInUpTo i j k <- (preview toOneInUpToPrism -> Just (MkToOneInUpTo k (Pair i j)))
-  where ToOneInUpTo i j k = review toOneInUpToPrism (MkToOneInUpTo k (Pair i j))
+{-# COMPLETE Max :: Max #-}
+pattern Max :: (MaxAs f, KnownNetType t) => Channel -> Channel -> Layer -> f t
+pattern Max i j k <- (preview maxPrism -> Just (MkMax k (Pair i j)))
+  where Max i j k = review maxPrism (MkMax k (Pair i j))
 
-{-# COMPLETE FromOneInUpTo :: FromOneInUpTo #-}
-pattern FromOneInUpTo :: (FromOneInUpToAs f, KnownNetType t) => Channel -> Channel -> Layer -> (f t)
-pattern FromOneInUpTo i j k <- (preview fromOneInUpToPrism -> Just (MkFromOneInUpTo k (Pair i j)))
-  where FromOneInUpTo i j k = review fromOneInUpToPrism (MkFromOneInUpTo k (Pair i j))
+{-# COMPLETE Min :: Min #-}
+pattern Min :: (MinAs f, KnownNetType t) => Channel -> Channel -> Layer -> f t
+pattern Min i j k <- (preview minPrism -> Just (MkMin k (Pair i j)))
+  where Min i j k = review minPrism (MkMin k (Pair i j))
 
-toOneInUpTo_ :: (ToOneInUpToAs f, KnownNetType t) => ToOneInUpTo t -> (f t)
-toOneInUpTo_ = review toOneInUpToPrism
+max_ :: (MaxAs f, KnownNetType t) => Max t -> f t
+max_ = review maxPrism
 
-fromOneInUpTo_ :: (FromOneInUpToAs f, KnownNetType t) => FromOneInUpTo t -> (f t)
-fromOneInUpTo_ = review fromOneInUpToPrism
+min_ :: (MinAs f, KnownNetType t) => Min t -> f t
+min_ = review minPrism
 
-instance KnownNetType t => Show (ToOneInUpTo t) where
-        showsPrec p (ToOneInUpTo i j k) = showParen (p >= 11) $
+instance KnownNetType t => Show (Max t) where
+        showsPrec p (Max i j k) = showParen (p >= 11) $
             showsTypeRep (typeRep (Proxy :: Proxy t)) .
-            showString "ToOneInUpTo " .
+            showString "Max " .
             showsPrec 11 i . showChar ' ' .
             showsPrec 11 j . showChar ' ' . 
             showsPrec 11 k
 
-instance KnownNetType t => Show (FromOneInUpTo t) where
-        showsPrec p (FromOneInUpTo i j k) = showParen (p >= 11) $
+instance KnownNetType t => Show (Min t) where
+        showsPrec p (Min i j k) = showParen (p >= 11) $
             showsTypeRep (typeRep (Proxy :: Proxy t)) .
-            showString "FromOneInUpTo " .
+            showString "Min " .
             showsPrec 11 i . showChar ' ' .
             showsPrec 11 j . showChar ' ' . 
             showsPrec 11 k
 
--- | Literal of 'ToOneInUpTo' with positive polarity.
-toOneInUpToLit :: (KnownNetType t, ToOneInUpToAs f) => Channel -> Channel -> Layer -> Lit (f t)
-toOneInUpToLit i j k = PosLit $ ToOneInUpTo i j k
+-- | Literal of 'Max' with positive polarity.
+maxLit :: (KnownNetType t, MaxAs f) => Channel -> Channel -> Layer -> Lit (f t)
+maxLit i j k = PosLit $ Max i j k
 
--- | Literal of 'FromOneInUpTo' with positive polarity.
-fromOneInUpToLit :: (KnownNetType t, FromOneInUpToAs f) => Channel -> Channel -> Layer -> Lit (f t)
-fromOneInUpToLit i j k = PosLit $ FromOneInUpTo i j k
+-- | Literal of 'Min' with positive polarity.
+minLit :: (KnownNetType t, MinAs f) => Channel -> Channel -> Layer -> Lit (f t)
+minLit i j k = PosLit $ Min i j k
 
--- | Literal of 'ToOneInUpTo' with positive polarity.
+-- | Literal of 'Max' with positive polarity.
 -- Returns Nothing if the two channel arguments are equal.
-toOneInUpToLit' :: (KnownNetType t, ToOneInUpToAs f) => Channel -> Channel -> Layer -> Maybe (Lit (f t))
-toOneInUpToLit' i j k
+maxLit' :: (KnownNetType t, MaxAs f) => Channel -> Channel -> Layer -> Maybe (Lit (f t))
+maxLit' i j k
     | i == j    = Nothing
-    | otherwise = Just $ toOneInUpToLit i j k
+    | otherwise = Just $ maxLit i j k
 
--- | Literal of 'FromOneInUpTo' with positive polarity.
+-- | Literal of 'Min' with positive polarity.
 -- Returns Nothing if the two channel arguments are equal.
-fromOneInUpToLit' :: (KnownNetType t, FromOneInUpToAs f) => Channel -> Channel -> Layer -> Maybe (Lit (f t))
-fromOneInUpToLit' i j k
+minLit' :: (KnownNetType t, MinAs f) => Channel -> Channel -> Layer -> Maybe (Lit (f t))
+minLit' i j k
     | i == j    = Nothing
-    | otherwise = Just $ fromOneInUpToLit i j k
+    | otherwise = Just $ minLit i j k
 
 -- #############################################################################
 -- #############################################################################
@@ -559,8 +562,8 @@ data NetworkSynthesis t
     deriving stock (Generic, Eq, Ord)
     deriving Enum via (FiniteEnumeration (NetworkSynthesis t))
 
-{-# COMPLETE SortedRel, ToOneInUpTo, FromOneInUpTo, ToBetweenBefore, ViaWrongTwist, Value, Gate, Unused :: NetworkSynthesis #-}
-{-# COMPLETE SortedRel, ToOneInUpTo, FromOneInUpTo, ToBetweenBefore, ViaWrongTwist, Value, GateOrUnused :: NetworkSynthesis #-}
+{-# COMPLETE SortedRel, Max, Min, ToBetweenBefore, ViaWrongTwist, Value, Gate, Unused :: NetworkSynthesis #-}
+{-# COMPLETE SortedRel, Max, Min, ToBetweenBefore, ViaWrongTwist, Value, GateOrUnused :: NetworkSynthesis #-}
 
 instance GateOrUnusedAs NetworkSynthesis where
     gateOrUnusedPrism :: Prism' (NetworkSynthesis t) (GateOrUnused t)
@@ -581,32 +584,32 @@ instance KnownNetType t => UnusedAs (NetworkSynthesis t) where
     unusedPrism :: Prism' (NetworkSynthesis t) Unused
     unusedPrism = gateOrUnusedPrism % unusedPrism 
 
-instance ToOneInUpToAs NetworkSynthesis where
-    toOneInUpToPrism :: forall t. KnownNetType t => Prism' (NetworkSynthesis t) (ToOneInUpTo t)
-    toOneInUpToPrism = prism constructToOneInUpTo matchToOneInUpTo
+instance MaxAs NetworkSynthesis where
+    maxPrism :: forall t. KnownNetType t => Prism' (NetworkSynthesis t) (Max t)
+    maxPrism = prism constructMax matchMax
       where
-        constructToOneInUpTo :: ToOneInUpTo t -> NetworkSynthesis t
-        constructToOneInUpTo (ToOneInUpTo i j k) 
+        constructMax :: Max t -> NetworkSynthesis t
+        constructMax (Max i j k) 
             | areAdjacent i j = Gate i j k
             | otherwise        = TOIUT k (Pair.AbsDiffGT1 i j)
-        matchToOneInUpTo :: NetworkSynthesis t -> Either (NetworkSynthesis t) (ToOneInUpTo t)
-        matchToOneInUpTo ns = case ns of
-            Gate i j k | areAdjacent i j   -> Right $ ToOneInUpTo i j k
-            TOIUT k (Pair.AbsDiffGT1 i j ) -> Right $ ToOneInUpTo i j k
+        matchMax :: NetworkSynthesis t -> Either (NetworkSynthesis t) (Max t)
+        matchMax ns = case ns of
+            Gate i j k | areAdjacent i j   -> Right $ Max i j k
+            TOIUT k (Pair.AbsDiffGT1 i j ) -> Right $ Max i j k
             _     -> Left ns
             
-instance FromOneInUpToAs NetworkSynthesis where
-    fromOneInUpToPrism :: forall t. KnownNetType t => Prism' (NetworkSynthesis t) (FromOneInUpTo t)
-    fromOneInUpToPrism = prism constructFromOneInUpTo matchFromOneInUpTo
+instance MinAs NetworkSynthesis where
+    minPrism :: forall t. KnownNetType t => Prism' (NetworkSynthesis t) (Min t)
+    minPrism = prism constructMin matchMin
       where
-        constructFromOneInUpTo :: FromOneInUpTo t -> NetworkSynthesis t
-        constructFromOneInUpTo (FromOneInUpTo i j k)
+        constructMin :: Min t -> NetworkSynthesis t
+        constructMin (Min i j k)
             | areAdjacent i j = Gate i j k
             | otherwise        = FOIUT k (Pair.AbsDiffGT1 i j)
-        matchFromOneInUpTo :: NetworkSynthesis t -> Either (NetworkSynthesis t) (FromOneInUpTo t)
-        matchFromOneInUpTo ns = case ns of
-            Gate i j k | areAdjacent i j   -> Right $ FromOneInUpTo i j k
-            FOIUT k (Pair.AbsDiffGT1 i j ) -> Right $ FromOneInUpTo i j k
+        matchMin :: NetworkSynthesis t -> Either (NetworkSynthesis t) (Min t)
+        matchMin ns = case ns of
+            Gate i j k | areAdjacent i j   -> Right $ Min i j k
+            FOIUT k (Pair.AbsDiffGT1 i j ) -> Right $ Min i j k
             _     -> Left ns
 
 instance ToBetweenBeforeAs (NetworkSynthesis t) where
@@ -659,13 +662,13 @@ instance ValueAs (Word32 -> NetworkSynthesis t) where
 -- pattern OffsetValue
 -- instance 
 
-{-# COMPLETE GU, ToOneInUpTo, FromOneInUpTo, Val :: NetworkSynthesis #-}
+{-# COMPLETE GU, Max, Min, Val :: NetworkSynthesis #-}
 
 instance KnownNetType t => Show (NetworkSynthesis t) where
     showsPrec p ns = showParen (p >= 11) $ case ns of
         GU gu -> showString "GateOrUnused_ " . showsPrec 11 gu
-        ToOneInUpTo i j k -> showString "ToOneInUpTo_ " . showsPrec 11 (ToOneInUpTo i j k :: ToOneInUpTo t)
-        FromOneInUpTo i j k -> showString "FromOneInUpTo_ " . showsPrec 11 (FromOneInUpTo i j k :: FromOneInUpTo t)
+        Max i j k -> showString "Max_ " . showsPrec 11 (Max i j k :: Max t)
+        Min i j k -> showString "Min_ " . showsPrec 11 (Min i j k :: Min t)
         ToBetwBef tbb -> showString "ToBetweenBefore_ " . showsPrec 11 tbb
         VWT vwt -> showString "ViaWrongTwist_ " . showsPrec 11 vwt
         SR sr -> showString "SortedRel_ " . showsPrec 11 sr

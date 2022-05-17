@@ -73,82 +73,82 @@ usage = concat
 
 -- gates between adjacent channels and ranges up to a single channel are already
 -- mapped to the same DIMACS value. Thus they are skipped here
-oneInUpToConstr :: [[Lit (NetworkSynthesis 'Standard)]]
-oneInUpToConstr = concat $
-    [ PosLit (toOneInUpTo_ t) `iffDisjunctionOf` [gateLit l j k | l <- range (i, pred j)]
-    | t@(ToOneInUpTo i j k) <- [ minBound .. maxBound ] 
+defMinMaxViaGates :: [[Lit (NetworkSynthesis 'Standard)]]
+defMinMaxViaGates = concat $
+    [ PosLit (max_ t) `iffDisjunctionOf` [gateLit l j k | l <- range (i, pred j)]
+    | t@(Max i j k) <- [ minBound .. maxBound ] 
     , not $ areAdjacent i j
     ] ++
-    [ PosLit (fromOneInUpTo_ f) `iffDisjunctionOf` [gateLit i l k | l <- range (succ i, j)]
-    | f@(FromOneInUpTo i j k) <- [ minBound .. maxBound ]
+    [ PosLit (min_ f) `iffDisjunctionOf` [gateLit i l k | l <- range (succ i, j)]
+    | f@(Min i j k) <- [ minBound .. maxBound ]
     , not $ areAdjacent i j
     ]
 
-oneInUpToConstrRec :: [[Lit (NetworkSynthesis 'Standard)]]
-oneInUpToConstrRec = concat $
-    [ PosLit (toOneInUpTo_ t) `iffDisjunctionOf` [gateLit i j k, toOneInUpToLit (succ i) j k]
-    | t@(ToOneInUpTo i j k) <- [ minBound .. maxBound ] 
+defMinMaxViaGatesRec :: [[Lit (NetworkSynthesis 'Standard)]]
+defMinMaxViaGatesRec = concat $
+    [ PosLit (max_ t) `iffDisjunctionOf` [gateLit i j k, maxLit (succ i) j k]
+    | t@(Max i j k) <- [ minBound .. maxBound ] 
     , not $ areAdjacent i j
     ] ++
-    [ PosLit (fromOneInUpTo_ f) `iffDisjunctionOf` [gateLit i j k, fromOneInUpToLit i (pred j) k]
-    | f@(FromOneInUpTo i j k) <- [ minBound .. maxBound ]
+    [ PosLit (min_ f) `iffDisjunctionOf` [gateLit i j k, minLit i (pred j) k]
+    | f@(Min i j k) <- [ minBound .. maxBound ]
     , not $ areAdjacent i j
     ]
 
-usageOneInUpToRec :: [[Lit (NetworkSynthesis 'Standard)]]
-usageOneInUpToRec = concat $
-    [ atMostOneOf [gateLit i j k, toOneInUpToLit (succ i) j k]
-    | ToOneInUpTo i j k <- [ minBound .. maxBound :: ToOneInUpTo 'Standard] 
+amoMinMaxRec :: [[Lit (NetworkSynthesis 'Standard)]]
+amoMinMaxRec = concat $
+    [ atMostOneOf [gateLit i j k, maxLit (succ i) j k]
+    | Max i j k <- [ minBound .. maxBound :: Max 'Standard] 
     , not $ areAdjacent i j
     ] ++
-    [ atMostOneOf [gateLit i j k, fromOneInUpToLit i (pred j) k]
-    | FromOneInUpTo i j k <- [ minBound .. maxBound :: FromOneInUpTo 'Standard]
+    [ atMostOneOf [gateLit i j k, minLit i (pred j) k]
+    | Min i j k <- [ minBound .. maxBound :: Min 'Standard]
     , not $ areAdjacent i j
     ]
     ++
     [ exactlyOneOf $ catMaybes
         [ Just $ unusedLit i k
-        , toOneInUpToLit' firstChannel i k
-        , fromOneInUpToLit' i lastChannel k
+        , maxLit' firstChannel i k
+        , minLit' i lastChannel k
         ]
     | k <- layers
     , i <- channels
     ]
     {- ++
     [ atMostOneOf $ catMaybes
-        [ toOneInUpToLit' firstChannel i k
-        , fromOneInUpToLit' i lastChannel k
+        [ maxLit' firstChannel i k
+        , minLit' i lastChannel k
         ]
     | k <- layers
     , i <- channels
     ]-}
 
 -- alternative to the usage constraint with smaller clauses
-usageOneInUpTo :: [[Lit (NetworkSynthesis 'Standard)]]
-usageOneInUpTo = concat $
+amoMinMax :: [[Lit (NetworkSynthesis 'Standard)]]
+amoMinMax = concat $
     [ atMostOneOf [gateLit l j k | l <- range (i, pred j)]
-    | ToOneInUpTo i j k <- [ minBound .. maxBound :: ToOneInUpTo 'Standard] 
+    | Max i j k <- [ minBound .. maxBound :: Max 'Standard] 
     ] ++
     [ atMostOneOf [gateLit i l k | l <- range (succ i, j)]
-    | FromOneInUpTo i j k <- [ minBound .. maxBound :: FromOneInUpTo 'Standard]
+    | Min i j k <- [ minBound .. maxBound :: Min 'Standard]
     ]
     ++
     [ (atMostOneOf $ catMaybes
         [ Just $ unusedLit i k
-        , toOneInUpToLit' firstChannel i k
-        -- , fromOneInUpToLit' i lastChannel k
+        , maxLit' firstChannel i k
+        -- , minLit' i lastChannel k
         ]) ++ (atMostOneOf $ catMaybes
         [ Just $ unusedLit i k
-        -- , toOneInUpToLit' firstChannel i k
-        , fromOneInUpToLit' i lastChannel k
+        -- , maxLit' firstChannel i k
+        , minLit' i lastChannel k
         ])
     | k <- layers
     , i <- channels
     ]
     {- ++
     [ atMostOneOf $ catMaybes
-        [ toOneInUpToLit' firstChannel i k
-        , fromOneInUpToLit' i lastChannel k
+        [ maxLit' firstChannel i k
+        , minLit' i lastChannel k
         ]
     | k <- layers
     , i <- channels
@@ -164,8 +164,8 @@ toBetweenBeforeConstr = concat
         0 -> [[ NegLit $ toBetweenBefore_ tbb ]] 
         _ -> PosLit (toBetweenBefore_ tbb) `iffDisjunctionOf`
                 [ toBetweenBeforeLit i j (pred k)
-                , fromOneInUpToLit i j k
-                , toOneInUpToLit i j k
+                , minLit i j k
+                , maxLit i j k
                 ]
 
 viaWrongTwistConstr :: [[Lit (NetworkSynthesis 'Standard)]]
@@ -277,40 +277,40 @@ updateSR (low, upp) = concat
         ]
     -- , 
     --     [ -- sorted relation is inferred backwards
-    --         [  toOneInUpToLit low j l
+    --         [  maxLit low j l
     --         ,  sortedRelLit (Value i k) ( inp j l)
     --         , -sortedRelLit (Value i k) (outp j l)
-    --         ] -- not toOneInUpToLit implies j is min channel or unused
+    --         ] -- not maxLit implies j is min channel or unused
     --     | k <- [ minBound .. maxBound ] :: [BetweenLayers]
     --     , l <- layers
     --     , Pair i j <- range (Pair low upp, Pair low upp) :: [Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel]
     --     ]
     , 
         [ catMaybes
-            [ toOneInUpToLit' low j l
+            [ maxLit' low j l
             , Just $ -sortedRelLit (inp  j l) (Value m k)
             , Just $  sortedRelLit (outp j l) (Value m k)
-            ] -- not toOneInUpToLit implies j is min channel or unused
+            ] -- not maxLit implies j is min channel or unused
         | l <- layers
         , k <- [ minBound .. maxBound ] :: [BetweenLayers]
         , Pair j m <- range (Pair low upp, Pair low upp) :: [Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel]
         ]
     -- , 
     --     [ -- sorted relation is inferred backwards
-    --         [  fromOneInUpToLit i upp k
+    --         [  minLit i upp k
     --         ,  sortedRelLit (inp  i k) (Value j l)
     --         , -sortedRelLit (outp i k) (Value j l)
-    --         ] -- not fromOneInUpToLit implies i is max channel or unused
+    --         ] -- not minLit implies i is max channel or unused
     --     | k <- layers
     --     , l <- [ minBound .. maxBound ] :: [BetweenLayers]
     --     , Pair i j <- range (Pair low upp, Pair low upp) :: [Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel]
     --     ]
     , 
         [ catMaybes
-            [ fromOneInUpToLit' i upp k
+            [ minLit' i upp k
             , Just $ -sortedRelLit (Value h l) (inp  i k)
             , Just $  sortedRelLit (Value h l) (outp i k)
-            ] -- not fromOneInUpToLit implies i is max channel or unused
+            ] -- not minLit implies i is max channel or unused
         | k <- layers
         , l <- [ minBound .. maxBound ] :: [BetweenLayers]
         , Pair h i <- range (Pair low upp, Pair low upp) :: [Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel]
@@ -418,19 +418,19 @@ updateH cexOffset (l, u) = concat
         ]
     , 
         [ catMaybes
-            [ toOneInUpToLit' l j k
+            [ maxLit' l j k
             , Just $  inp  j k
             , Just $ -outp j k
-            ] -- not toOneInUpToLit implies j is min channel or unused
+            ] -- not maxLit implies j is min channel or unused
         | j <- range (l, u)
         , k <- layers
         ]
     , 
         [ catMaybes 
-            [ fromOneInUpToLit' i u k
+            [ minLit' i u k
             , Just $ -inp  i k
             , Just $  outp i k
-            ] -- not fromOneInUpToLit implies i is max channel or unused
+            ] -- not minLit implies i is max channel or unused
         | i <- range (l, u)
         , k <- layers
         ]
@@ -532,19 +532,19 @@ updateEM cexOffset (l, u) = concat
         ]
     , 
         [ catMaybes
-            [ toOneInUpToLit' l j k
+            [ maxLit' l j k
             , Just $  inp  j k
             , Just $ -outp j k
-            ] -- not toOneInUpToLit implies j is min channel or unused
+            ] -- not maxLit implies j is min channel or unused
         | j <- range (l, u)
         , k <- layers
         ]
     , 
         [ catMaybes 
-            [ fromOneInUpToLit' i u k
+            [ minLit' i u k
             , Just $ -inp  i k
             , Just $  outp i k
-            ] -- not fromOneInUpToLit implies i is max channel or unused
+            ] -- not minLit implies i is max channel or unused
         | i <- range (l, u)
         , k <- layers
         ]

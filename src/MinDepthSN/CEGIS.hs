@@ -60,9 +60,9 @@ networkSolution = runSolver $ do
 
     -- add mandatory initial constraints
     addClauses usage
-    -- addClauses usageOneInUpToRec
-    -- addClauses usageOneInUpTo
-    addClauses oneInUpToConstr
+    -- addClauses amoMinMaxRec
+    -- addClauses amoMinMax
+    addClauses defMinMaxViaGates
 
     -- addClauses $ map ((: []) . PosLit . gateOrUnused_) x
     -- addClauses prefix
