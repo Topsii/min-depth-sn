@@ -21,6 +21,8 @@
 {-# language FlexibleInstances #-} -- for AsValue instance in NetworkSynthesis
 
 {-# OPTIONS_GHC -fno-warn-duplicate-exports #-} -- pattern synonyms are intentionally bundled with multiple types
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# language TypeFamilies #-}
 
@@ -104,11 +106,12 @@ import Optics.Core ((%),  preview, prism, review, Prism' )
 import Data.Pair
 import qualified Data.Pair.AbsDiffGT1 as Pair
 import Data.Proxy
-import Data.Typeable ( showsTypeRep, typeRep )
+import Data.Typeable ( showsTypeRep, typeRep, Typeable )
 import Data.Word (Word32)
 
 import MinDepthSN.Data.NetworkType
 import Control.Monad ((>=>))
+import Data.Kind
 
 
 -- #############################################################################
@@ -277,6 +280,62 @@ gateOrUnusedLit i j k = PosLit $ GateOrUnused i j k
 
 -- #############################################################################
 -- #############################################################################
+
+data DeterminateChannel = DeterminateMin | DeterminateMax
+    deriving stock (Show, Eq, Ord, Bounded, Enum, Ix)
+
+data GateRange (s :: DeterminateChannel) (t :: NetworkType) = MkGateRange Layer (Pair (AreGateChannelsOrdered t) 'NoDuplicates Channel)
+    deriving stock (Generic, Eq, Ord, Ix)
+    deriving Enum via (FiniteEnumeration (GateRange s t))
+    deriving Bounded via (Generically (GateRange s t))
+
+-- class MinAs f where
+--     minPrism :: KnownNetType t => Prism' (f t) (Min t)
+-- class (GRAs a s t ~ a) => GateRangeAs a s t where
+--     type GRAs a s t :: Type
+--     gateRangePrism :: Prism' (GRAs a s t) (GateRange s t)
+
+class GateRangeAs f s where
+    gateRangePrism :: Prism' (f t) (GateRange s t)
+
+-- instance GateRangeAs (GateRange s t) s t where
+--     type GRAs (GateRange s t) s t = GateRange s t
+--     gateRangePrism = prism id Right
+
+instance GateRangeAs (GateRange t) s t where
+    gateRangePrism = prism id Right
+
+{-# COMPLETE GateRange :: GateRange #-}
+-- pattern GateRange :: (GateRangeAs a s t, KnownNetType t) => Proxy s -> Proxy t -> Channel -> Channel -> Layer -> a
+-- pattern GateRange ps pt i j k <- (preview gateRangePrism -> Just (MkGateRange k (Pair i j)))
+--     where GateRange ps pt i j k = review gateRangePrism (MkGateRange k (Pair i j))
+
+pattern GateRange :: forall a s t. (GateRangeAs a s t, KnownNetType t) => Channel -> Channel -> Layer -> GRAs a s t
+pattern GateRange i j k <- (preview gateRangePrism -> Just (MkGateRange k (Pair i j) :: GateRange s t))
+    where GateRange i j k = review gateRangePrism (MkGateRange k (Pair i j))
+
+gateRange_ :: (GateRangeAs a s t) => GateRange s t -> a
+gateRange_ = review gateRangePrism
+
+-- | Literal of 'Max' with positive polarity.
+gateRange :: forall a s t. (KnownNetType t, GateRangeAs a s t) => Channel -> Channel -> Layer -> Lit a
+gateRange i j k = PosLit $ GateRange @a @s @t i j k
+
+-- | Literal of 'Max' with positive polarity.
+-- Returns Nothing if the two channel arguments are equal.
+gateRange' :: (KnownNetType t, GateRangeAs a s t) => Channel -> Channel -> Layer -> Maybe (Lit a)
+gateRange' i j k
+    | i == j    = Nothing
+    | otherwise = Just $ gateRange i j k
+
+instance (Typeable s, KnownNetType t) => Show (GateRange s t) where
+        showsPrec p (GateRange i j k :: GRAs a s t) = showParen (p >= 11) $
+            showsTypeRep (typeRep (Proxy :: Proxy t)) .
+            showsTypeRep (typeRep (Proxy :: Proxy s)) .
+            showsPrec 11 i . showChar ' ' .
+            showsPrec 11 j . showChar ' ' . 
+            showsPrec 11 k
+    
 
 {- | @Max i j k@ creates a variable \(t_{i,j}^k\) with \( i \neq j \) 
 representing the fact that there is a gate with min channel \(l\) and max
@@ -555,6 +614,7 @@ data NetworkSynthesis t
     = GU (GateOrUnused t)
     | TOIUT Layer (Pair.AbsDiffGT1 (AreGateChannelsOrdered t) Channel)
     | FOIUT Layer (Pair.AbsDiffGT1 (AreGateChannelsOrdered t) Channel)
+    | GR DeterminateChannel Layer (Pair.AbsDiffGT1 (AreGateChannelsOrdered t) Channel)
     | ToBetwBef ToBetweenBefore
     | VWT ViaWrongTwist
     | SR (SortedRel t)
@@ -583,6 +643,21 @@ instance GateAs NetworkSynthesis where
 instance KnownNetType t => UnusedAs (NetworkSynthesis t) where
     unusedPrism :: Prism' (NetworkSynthesis t) Unused
     unusedPrism = gateOrUnusedPrism % unusedPrism 
+
+instance GateRangeAs (NetworkSynthesis t) s t where
+    type GRAs (NetworkSynthesis t) s t = NetworkSynthesis t
+    gateRangePrism :: forall t. KnownNetType t => Prism' (NetworkSynthesis t) (Max t)
+    gateRangePrism = prism constructMax matchMax
+        where
+        constructMax :: Max t -> NetworkSynthesis t
+        constructMax (Max i j k) 
+            | areAdjacent i j = Gate i j k
+            | otherwise        = TOIUT k (Pair.AbsDiffGT1 i j)
+        matchMax :: NetworkSynthesis t -> Either (NetworkSynthesis t) (Max t)
+        matchMax ns = case ns of
+            Gate i j k | areAdjacent i j   -> Right $ Max i j k
+            TOIUT k (Pair.AbsDiffGT1 i j ) -> Right $ Max i j k
+            _     -> Left ns
 
 instance MaxAs NetworkSynthesis where
     maxPrism :: forall t. KnownNetType t => Prism' (NetworkSynthesis t) (Max t)

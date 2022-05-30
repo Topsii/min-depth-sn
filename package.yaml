@@ -28,8 +28,8 @@ ghc-options:
 - -Wmissing-deriving-strategies
 # - -fno-warn-orphans
 # - -fno-warn-incomplete-patterns
-# - -fno-warn-unused-top-binds
-# - -fno-warn-unused-imports
+- -fno-warn-unused-top-binds
+- -fno-warn-unused-imports
 - -O2
 - -fno-ignore-asserts
 # - -fignore-asserts
